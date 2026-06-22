@@ -315,12 +315,16 @@ const handleRequest = async (method, url, data) => {
     }
   }
 
-  // Handle notifications read status
   if (path === '/notifications/read-all') {
     const notifs = getDB('notifications');
     notifs.forEach(n => n.read = true);
     setDB('notifications', notifs);
     return { data: { success: true } };
+  }
+  if (path === '/notifications/unread-count') {
+    const notifs = getDB('notifications');
+    const count = notifs.filter(n => !n.read).length;
+    return { data: { success: true, count } };
   }
   const notifReadMatch = path.match(/^\/notifications\/([^/]+)\/read$/);
   if (notifReadMatch) {
