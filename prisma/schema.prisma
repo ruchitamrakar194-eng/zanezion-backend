@@ -622,6 +622,7 @@ model Item {
   reorderLevel  Float    @default(0)
   inventoryType String   @default("INTERNAL") // INTERNAL, MARKETPLACE
   clientId      Int?
+  price         Float    @default(0)
   status        String   @default("active")
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt

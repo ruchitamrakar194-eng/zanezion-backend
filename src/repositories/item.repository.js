@@ -64,5 +64,13 @@ export const updateItem = async (id, data) => {
 };
 
 export const deleteItem = async (id) => {
-  return await prisma.item.delete({ where: { id } });
+  return await prisma.$transaction([
+    prisma.inventoryStock.deleteMany({ where: { itemId: id } }),
+    prisma.stockMovement.deleteMany({ where: { itemId: id } }),
+    prisma.deliveryItem.deleteMany({ where: { itemId: id } }),
+    prisma.orderItem.deleteMany({ where: { itemId: id } }),
+    prisma.invoiceItem.deleteMany({ where: { itemId: id } }),
+    prisma.grnItem.deleteMany({ where: { itemId: id } }),
+    prisma.item.delete({ where: { id } })
+  ]);
 };

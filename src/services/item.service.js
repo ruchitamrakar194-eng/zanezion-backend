@@ -3,6 +3,7 @@ import * as categoryRepo from '../repositories/itemCategory.repository.js';
 import * as unitRepo from '../repositories/itemUnit.repository.js';
 import AppError from '../utils/AppError.js';
 import { logAudit } from '../utils/audit.js';
+import prisma from '../config/db.js';
 
 export const createItem = async (data, performerId, tenantId) => {
   // Check category
@@ -38,10 +39,9 @@ export const createItem = async (data, performerId, tenantId) => {
     };
   }
 
-  // Remove qty, warehouseId, and price from root level so Prisma doesn't complain
+  // Remove qty and warehouseId from root level so Prisma doesn't complain
   delete createPayload.qty;
   delete createPayload.warehouseId;
-  delete createPayload.price;
 
 
   const newItem = await itemRepo.createItem(createPayload);
@@ -79,7 +79,30 @@ export const updateItem = async (id, data, tenantId, performerId) => {
     }
   }
 
-  const updatedItem = await itemRepo.updateItem(id, data);
+  const updatePayload = { ...data };
+  const qty = updatePayload.qty !== undefined ? Number(updatePayload.qty) : null;
+  const warehouseId = updatePayload.warehouseId ? parseInt(updatePayload.warehouseId, 10) : null;
+
+  delete updatePayload.qty;
+  delete updatePayload.warehouseId;
+
+  const updatedItem = await itemRepo.updateItem(id, updatePayload);
+
+  if (qty !== null && warehouseId !== null && !isNaN(warehouseId)) {
+    // Relocate/update inventory stock records for this item
+    await prisma.inventoryStock.deleteMany({
+      where: { itemId: id }
+    });
+
+    await prisma.inventoryStock.create({
+      data: {
+        itemId: id,
+        warehouseId,
+        quantity: qty,
+        tenantId: tenantId || item.tenantId || 1
+      }
+    });
+  }
 
   await logAudit({
     module: 'ITEMS',
