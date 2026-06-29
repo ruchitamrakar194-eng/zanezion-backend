@@ -10,7 +10,9 @@ app.use(helmet());
 app.use(
   cors({
     origin: [
-      "https://zanezion.kiaansoftware.com"
+      "https://zanezion.kiaansoftware.com",
+      "http://localhost:5173",
+      "http://localhost:3000"
     ],
     methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization"]

@@ -10,7 +10,10 @@ const defaultRoles = [
   'INVENTORY',
   'CONCIERGE',
   'CLIENT',
-  'FIELD_STAFF'
+  'STAFF',           // was FIELD_STAFF — renamed to match backend code
+  'CUSTOMER',        // personal signup role
+  'BUSINESS_CLIENT', // business signup role
+  'SAAS_CLIENT',     // SaaS signup role
 ];
 
 const defaultPermissions = [
