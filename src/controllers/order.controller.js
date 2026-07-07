@@ -9,30 +9,69 @@ export const createOrder = async (req, res, next) => {
     let incomingVendorId = req.body.vendorId ?? req.body.vendor_id;
     let incomingCompanyId = req.body.companyId ?? req.body.company_id;
 
-    // Explicitly validate clientId to prevent Prisma crashes
-    const parsedClientId = incomingClientId && incomingClientId !== "" ? Number(incomingClientId) : null;
-    
+    const isSuperAdmin = req.user.role?.name === 'SUPER_ADMIN';
+    const tenantIdToUse = isSuperAdmin ? (req.body.tenantId || req.user.tenantId || 1) : (req.user.tenantId || 1);
+
+    // Try to parse clientId from payload
+    let parsedClientId = incomingClientId && incomingClientId !== "" ? Number(incomingClientId) : null;
+
+    // If clientId is missing/invalid (e.g. customer user sending 'CLT-GUEST' or nothing),
+    // auto-resolve from their user account via email → find or create a Client record.
     if (!parsedClientId || isNaN(parsedClientId) || parsedClientId <= 0) {
-      return res.status(400).json({
-        success: false,
-        message: "Client selection is required",
-        field: "clientId"
-      });
+      const roleNameLower = (req.user.role?.name || '').toLowerCase();
+      const isCustomerRole = ['customer', 'business_client', 'individual_client', 'guest', 'saas_client', 'client', 'unknown'].includes(roleNameLower);
+
+      if (isCustomerRole) {
+        // 1. Try to find an existing client linked by email
+        let clientRecord = await prisma.client.findFirst({
+          where: { email: req.user.email, tenantId: tenantIdToUse }
+        });
+
+        // 2. Fallback: find any client for this tenant with matching name
+        if (!clientRecord && req.user.name) {
+          clientRecord = await prisma.client.findFirst({
+            where: { companyName: req.user.name, tenantId: tenantIdToUse }
+          });
+        }
+
+        // 3. Auto-create a client record from their profile
+        if (!clientRecord) {
+          const clientCode = `CLT-${Date.now().toString().slice(-8)}`;
+          clientRecord = await prisma.client.create({
+            data: {
+              tenantId: tenantIdToUse,
+              companyName: req.user.name || req.user.email || 'Guest Client',
+              clientCode,
+              contactPerson: req.user.name || 'Guest',
+              email: req.user.email || `guest-${Date.now()}@zanezion.com`,
+              phone: req.user.phone || '0000000000',
+              clientType: roleNameLower === 'customer' ? 'individual' : 'business',
+              status: 'active',
+            }
+          });
+        }
+
+        parsedClientId = clientRecord.id;
+      } else {
+        // Staff/admin must explicitly pass a valid clientId
+        return res.status(400).json({
+          success: false,
+          message: "Client selection is required",
+          field: "clientId"
+        });
+      }
     }
 
     req.body.clientId = parsedClientId;
-    
+
     // Safely parse vendorId and companyId
     req.body.vendorId = incomingVendorId && incomingVendorId !== "" ? Number(incomingVendorId) : null;
     req.body.companyId = incomingCompanyId && incomingCompanyId !== "" ? Number(incomingCompanyId) : null;
-    
+
     // Remove old snake_case keys so Prisma doesn't crash on unknown args
     delete req.body.customer_id;
     delete req.body.vendor_id;
     delete req.body.company_id;
-
-    const isSuperAdmin = req.user.role?.name === 'SUPER_ADMIN';
-    const tenantIdToUse = isSuperAdmin ? (req.body.tenantId || req.user.tenantId || 1) : (req.user.tenantId || 1);
 
     const order = await orderService.createOrder(req.body, req.user.id, tenantIdToUse);
     sendResponse(res, 201, 'Order created successfully', order);
