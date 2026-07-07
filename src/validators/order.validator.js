@@ -13,14 +13,14 @@ const orderItemSchema = z.object({
 export const createOrderSchema = z.object({
   clientId: z.preprocess(
     (val) => {
+      if (val === undefined || val === null || val === '' || val === 'CLT-GUEST') return undefined;
       if (typeof val === 'string' && val.trim() !== '') return Number(val);
-      if (val === undefined || val === null || val === '') return undefined;
       return val;
     },
     z.number({
       required_error: "Client selection is required",
       invalid_type_error: "Client ID must be a valid number",
-    }).int().positive('Client selection is required')
+    }).int().positive('Client selection is required').optional()
   ),
   vendorId: z.union([z.number(), z.string()]).nullable().optional(),
   companyId: z.union([z.number(), z.string()]).nullable().optional(),
