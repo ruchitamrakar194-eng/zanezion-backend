@@ -112,7 +112,8 @@ export const checkPermission = (routeIdentifier, action) => {
         return next();
       }
 
-      const isCustomer = ['BUSINESS_CLIENT', 'INDIVIDUAL_CLIENT', 'UNKNOWN', 'GUEST', 'client', 'saas_client', 'customer'].includes(roleName);
+      const roleNameLower = roleName.toLowerCase();
+      const isCustomer = ['business_client', 'individual_client', 'unknown', 'guest', 'client', 'saas_client', 'customer'].includes(roleNameLower);
       if (isCustomer && action === 'READ' && ['ORDERS', 'CLIENTS', 'USERS', 'VENDORS', 'DELIVERIES', 'WAREHOUSES', 'INVOICES', 'PURCHASE_REQUESTS', 'QUOTATIONS', 'RFQS', 'PURCHASE_ORDERS', 'ITEMS', 'PLANS', 'TRACKING', 'MISSIONS', 'ROUTES', 'URGENT', 'SUPPORT', 'CONCIERGE'].includes(routeIdentifier)) {
         console.log(`[RBAC] Role: ${roleName} | Route: ${routeIdentifier} | Action: READ | Result: ALLOWED (Customer Bypass)`);
         return next();
