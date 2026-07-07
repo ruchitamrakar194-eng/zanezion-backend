@@ -189,8 +189,9 @@ export const updateOrder = async (id, data, tenantId, performerId) => {
     }
   }
 
+  // clientId is handled via Prisma relation (client connect), not as a raw field
   const validDbKeys = [
-    'id', 'tenantId', 'orderNumber', 'clientId', 'createdById',
+    'id', 'tenantId', 'orderNumber', 'createdById',
     'status', 'priority', 'orderType', 'totalAmount'
   ];
 
@@ -198,6 +199,7 @@ export const updateOrder = async (id, data, tenantId, performerId) => {
   const metadataExt = {};
 
   Object.keys(orderData).forEach(key => {
+    if (key === 'clientId') return; // handled separately below
     if (validDbKeys.includes(key)) {
       dbData[key] = orderData[key];
     } else {
@@ -205,7 +207,14 @@ export const updateOrder = async (id, data, tenantId, performerId) => {
     }
   });
 
-  if (dbData.clientId) dbData.clientId = Number(dbData.clientId);
+  // Safely update client relation only when a valid numeric clientId is provided
+  const rawClientId = orderData.clientId;
+  const parsedClientId = rawClientId && rawClientId !== 'CLT-GUEST' ? Number(rawClientId) : NaN;
+  if (!isNaN(parsedClientId) && parsedClientId > 0) {
+    dbData.client = { connect: { id: parsedClientId } };
+  }
+  // else: keep existing client — do not touch the relation
+
   if (data.totalAmount !== undefined || data.total_amount !== undefined) {
     dbData.totalAmount = Number(data.totalAmount || data.total_amount || 0);
   }
