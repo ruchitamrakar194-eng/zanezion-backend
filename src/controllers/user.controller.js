@@ -111,7 +111,9 @@ export const updateUser = async (req, res, next) => {
 
     // Common fields
     if (data.name !== undefined) payload.name = data.name;
+    if (data.email !== undefined) payload.email = data.email;
     if (data.phone !== undefined) payload.phone = data.phone;
+    if (data.password !== undefined && data.password) payload.password = data.password;
     if (data.birthday !== undefined) payload.birthday = data.birthday ? new Date(data.birthday) : null;
     if (data.nibNumber !== undefined) payload.nibNumber = data.nibNumber || null;
     if (data.hasPassport !== undefined) payload.hasPassport = !!data.hasPassport;
@@ -119,6 +121,7 @@ export const updateUser = async (req, res, next) => {
     if (data.hasNIB !== undefined) payload.hasNIB = !!data.hasNIB;
     if (data.hasResume !== undefined) payload.hasResume = !!data.hasResume;
     if (data.bankingInfo !== undefined) payload.bankingInfo = data.bankingInfo || {};
+    if (data.isSalaried !== undefined) payload.isSalaried = !!data.isSalaried;
 
     // Concierge & Membership fields
     if (data.plan !== undefined) payload.plan = data.plan;
