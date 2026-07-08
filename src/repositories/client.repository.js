@@ -160,9 +160,12 @@ export const deleteClient = async (id) => {
     // 5. Delete the client itself
     await tx.client.delete({ where: { id } });
 
-    // 6. Delete the associated user so they cannot login
+    // 6. Soft delete the associated user so they cannot login
     if (client && client.email) {
-      await tx.user.deleteMany({ where: { email: client.email } });
+      await tx.user.updateMany({
+        where: { email: client.email },
+        data: { deletedAt: new Date(), status: 'inactive' }
+      });
     }
 
     return true;
