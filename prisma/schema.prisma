@@ -30,6 +30,13 @@ model User {
   hasLicense       Boolean   @default(false)
   hasNIB           Boolean   @default(false)
   hasResume        Boolean   @default(false)
+  hasProfilePic    Boolean   @default(false)
+  hasCerts         Boolean   @default(false)
+  passportUrl      String?
+  licenseUrl       String?
+  nibUrl           String?
+  resumeUrl        String?
+  certsUrl         String?
   bankingInfo      Json?
   lastLogin        DateTime?
   resetToken       String?
