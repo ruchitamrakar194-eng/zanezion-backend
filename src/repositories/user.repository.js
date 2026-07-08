@@ -63,6 +63,7 @@ export const findAllUsersByTenant = async (tenantId, query) => {
         hasNIB: true,
         hasResume: true,
         bankingInfo: true,
+        isSalaried: true,
         createdAt: true
       },
       orderBy: { createdAt: 'desc' }

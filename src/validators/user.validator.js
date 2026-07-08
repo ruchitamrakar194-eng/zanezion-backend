@@ -8,6 +8,23 @@ export const createUserSchema = z.object({
     password: z.string().min(6, 'Password must be at least 6 characters'),
     roleId: z.coerce.number().int().positive('Role is required'),
     tenantId: z.coerce.number().int().positive('Tenant ID is required').optional(),
+    status: z.string().optional(),
+    avatar: z.string().optional(),
+    birthday: z.string().nullable().optional(),
+    nibNumber: z.string().nullable().optional(),
+    vacationBalance: z.coerce.number().optional(),
+    employmentStatus: z.string().optional(),
+    bankingInfo: z.object({
+      bank: z.string().nullable().optional(),
+      account: z.string().nullable().optional(),
+      routing: z.string().nullable().optional(),
+      method: z.string().nullable().optional(),
+    }).optional(),
+    hasPassport: z.boolean().optional(),
+    hasLicense: z.boolean().optional(),
+    hasNIB: z.boolean().optional(),
+    hasResume: z.boolean().optional(),
+    isSalaried: z.boolean().optional(),
   }),
 });
 

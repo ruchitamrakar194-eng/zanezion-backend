@@ -45,6 +45,7 @@ model User {
   is_upgraded                Boolean   @default(false)
   concierge_member           Boolean   @default(false)
   concierge_membership_since String?
+  isSalaried                 Boolean   @default(false)
   createdAt        DateTime  @default(now())
   updatedAt        DateTime  @updatedAt
   deletedAt        DateTime?

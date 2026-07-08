@@ -6,7 +6,9 @@
   "type": "module",
   "scripts": {
     "dev": "nodemon src/server.js",
-    "start": "node src/server.js"
+    "build": "npx prisma generate && npx prisma db push --accept-data-loss",
+    "postinstall": "npx prisma generate && npx prisma db push --accept-data-loss",
+    "start": "npx prisma generate && npx prisma db push --accept-data-loss && node src/server.js"
   },
   "keywords": [],
   "author": "",
@@ -26,7 +28,7 @@
     "helmet": "^8.2.0",
     "jsonwebtoken": "^9.0.3",
     "multer": "^2.1.1",
-    "nodemailer": "^8.0.10",
+    "nodemailer": "^9.0.3",
     "socket.io": "^4.8.3",
     "zod": "^4.4.3"
   }
