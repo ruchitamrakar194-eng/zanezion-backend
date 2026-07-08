@@ -9,6 +9,17 @@ export const createClient = async (data, performerId, tenantId) => {
     throw new AppError('Client code must be unique', 400);
   }
 
+  if (data.email) {
+    const existingClientByEmail = await clientRepo.findClientByEmail(data.email);
+    if (existingClientByEmail) {
+      throw new AppError('Email address is already registered', 400);
+    }
+    const existingUserByEmail = await clientRepo.findUserByEmail(data.email);
+    if (existingUserByEmail) {
+      throw new AppError('Email address is already registered', 400);
+    }
+  }
+
   const newClient = await clientRepo.createClient({ ...data, tenantId });
 
   await logAudit({
@@ -44,6 +55,22 @@ export const getClientById = async (id, tenantId) => {
 
 export const updateClient = async (id, data, tenantId, performerId) => {
   const client = await getClientById(id, tenantId);
+
+  if (data.email && data.email !== client.email) {
+    const existingClientByEmail = await clientRepo.findClientByEmail(data.email);
+    if (existingClientByEmail) {
+      throw new AppError('Email address is already registered', 400);
+    }
+    const existingUserByEmail = await clientRepo.findUserByEmail(data.email);
+    if (existingUserByEmail) {
+      throw new AppError('Email address is already registered', 400);
+    }
+  }
+
+  if (data.status) {
+    const userStatus = data.status.toLowerCase() === 'active' ? 'Active' : 'Inactive';
+    await clientRepo.updateUserStatusByEmail(client.email, userStatus);
+  }
 
   const updatedClient = await clientRepo.updateClient(id, data);
 

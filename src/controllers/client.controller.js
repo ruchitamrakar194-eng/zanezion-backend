@@ -55,7 +55,11 @@ export const createClient = async (req, res, next) => {
         }, req.user.id, req.ip, req.headers['user-agent']);
       } else {
         const hashedPassword = await bcrypt.hash(payload.password, 10);
-        await userService.updateUser(existingUser.id, { password: hashedPassword }, null, req.ip, req.headers['user-agent']);
+        await userService.updateUser(existingUser.id, {
+          password: hashedPassword,
+          deletedAt: null,
+          status: 'Active'
+        }, null, req.ip, req.headers['user-agent']);
       }
     }
 
@@ -130,7 +134,11 @@ export const updateClient = async (req, res, next) => {
       
       if (existingUser) {
         const hashedPassword = await bcrypt.hash(payload.password, 10);
-        await userService.updateUser(existingUser.id, { password: hashedPassword }, null, req.ip, req.headers['user-agent']);
+        await userService.updateUser(existingUser.id, {
+          password: hashedPassword,
+          deletedAt: null,
+          status: 'Active'
+        }, null, req.ip, req.headers['user-agent']);
       } else {
         await userService.createUser({
           name: updatedClient.companyName || 'SaaS Client',

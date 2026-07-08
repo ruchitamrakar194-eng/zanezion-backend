@@ -187,3 +187,28 @@ export const createClientContact = async (clientId, data, tenantId) => {
 export const deleteClientContact = async (id) => {
   return await prisma.clientContact.delete({ where: { id } });
 };
+
+export const findClientByEmail = async (email) => {
+  return await prisma.client.findFirst({
+    where: { email }
+  });
+};
+
+export const findUserByEmail = async (email) => {
+  return await prisma.user.findFirst({
+    where: { email, deletedAt: null }
+  });
+};
+
+export const updateUserStatusByEmail = async (email, status) => {
+  const user = await prisma.user.findFirst({
+    where: { email, deletedAt: null }
+  });
+  if (user) {
+    return await prisma.user.update({
+      where: { id: user.id },
+      data: { status }
+    });
+  }
+  return null;
+};
