@@ -5,6 +5,8 @@ import { createUserSchema, updateUserSchema } from '../validators/user.validator
 import { authenticate, checkPermission } from '../middlewares/auth.middleware.js';
 import { enforceSubscriptionLimits } from '../middlewares/subscription.middleware.js';
 
+import { upload } from '../middlewares/upload.middleware.js';
+
 const router = express.Router();
 
 router.use(authenticate);
@@ -19,6 +21,7 @@ router.get('/:id', checkPermission('USERS', 'READ'), userController.getUserById)
 // Must have create users permission
 router.post('/', checkPermission('USERS', 'CREATE'), enforceSubscriptionLimits, validate(createUserSchema), userController.createUser);
 router.put('/:id', checkPermission('USERS', 'UPDATE'), validate(updateUserSchema), userController.updateUser);
+router.post('/:id/documents', checkPermission('USERS', 'UPDATE'), upload.single('file'), userController.uploadDocument);
 router.delete('/:id', checkPermission('USERS', 'DELETE'), userController.deleteUser);
 
 export default router;

@@ -37,9 +37,19 @@ export const changePasswordSchema = z.object({
 
 export const updateProfileSchema = z.object({
   body: z.object({
+    name: z.string().min(2).optional(),
     fullName: z.string().min(2).optional(),
     phone: z.string().optional(),
-    avatar: z.string().url().optional(),
+    avatar: z.string().optional(),
+    password: z.string().min(6).optional().or(z.literal('')),
+    birthday: z.string().nullable().optional(),
+    nibNumber: z.string().nullable().optional(),
+    bankingInfo: z.object({
+      bank: z.string().nullable().optional(),
+      account: z.string().nullable().optional(),
+      routing: z.string().nullable().optional(),
+      method: z.string().nullable().optional(),
+    }).optional(),
   }),
 });
 

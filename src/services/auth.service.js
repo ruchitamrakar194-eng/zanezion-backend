@@ -169,14 +169,27 @@ export const getProfile = async (userId) => {
 };
 
 export const updateProfile = async (userId, data, tenantId, ipAddress, userAgent) => {
-  const updated = await userRepository.updateUser(userId, data);
+  const payload = {};
+  if (data.name !== undefined) payload.name = data.name;
+  if (data.fullName !== undefined) payload.name = data.fullName;
+  if (data.phone !== undefined) payload.phone = data.phone;
+  if (data.avatar !== undefined) payload.avatar = data.avatar;
+  if (data.birthday !== undefined) payload.birthday = data.birthday ? new Date(data.birthday) : null;
+  if (data.nibNumber !== undefined) payload.nibNumber = data.nibNumber || null;
+  if (data.bankingInfo !== undefined) payload.bankingInfo = data.bankingInfo || {};
+
+  if (data.password) {
+    payload.password = await bcrypt.hash(data.password, 10);
+  }
+
+  const updated = await userRepository.updateUser(userId, payload);
   updated.password = undefined;
 
   await logAudit({
     module: 'AUTH',
     action: 'UPDATE_PROFILE',
     description: 'Updated user profile',
-    newValue: data,
+    newValue: payload,
     performedBy: userId
   });
   return updated;

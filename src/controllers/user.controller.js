@@ -1,5 +1,6 @@
 import * as userService from '../services/user.service.js';
 import { sendResponse } from '../utils/response.js';
+import cloudinary from '../config/cloudinary.js';
 
 export const createUser = async (req, res, next) => {
   try {
@@ -111,14 +112,24 @@ export const updateUser = async (req, res, next) => {
 
     // Common fields
     if (data.name !== undefined) payload.name = data.name;
+    if (data.email !== undefined) payload.email = data.email;
     if (data.phone !== undefined) payload.phone = data.phone;
+    if (data.password !== undefined && data.password) payload.password = data.password;
     if (data.birthday !== undefined) payload.birthday = data.birthday ? new Date(data.birthday) : null;
     if (data.nibNumber !== undefined) payload.nibNumber = data.nibNumber || null;
     if (data.hasPassport !== undefined) payload.hasPassport = !!data.hasPassport;
     if (data.hasLicense !== undefined) payload.hasLicense = !!data.hasLicense;
     if (data.hasNIB !== undefined) payload.hasNIB = !!data.hasNIB;
     if (data.hasResume !== undefined) payload.hasResume = !!data.hasResume;
+    if (data.hasProfilePic !== undefined) payload.hasProfilePic = !!data.hasProfilePic;
+    if (data.hasCerts !== undefined) payload.hasCerts = !!data.hasCerts;
+    if (data.passportUrl !== undefined) payload.passportUrl = data.passportUrl || null;
+    if (data.licenseUrl !== undefined) payload.licenseUrl = data.licenseUrl || null;
+    if (data.nibUrl !== undefined) payload.nibUrl = data.nibUrl || null;
+    if (data.resumeUrl !== undefined) payload.resumeUrl = data.resumeUrl || null;
+    if (data.certsUrl !== undefined) payload.certsUrl = data.certsUrl || null;
     if (data.bankingInfo !== undefined) payload.bankingInfo = data.bankingInfo || {};
+    if (data.isSalaried !== undefined) payload.isSalaried = !!data.isSalaried;
 
     // Concierge & Membership fields
     if (data.plan !== undefined) payload.plan = data.plan;
@@ -140,6 +151,65 @@ export const deleteUser = async (req, res, next) => {
 
     await userService.deleteUser(Number(req.params.id), tenantIdToFilter, req.ip, req.headers['user-agent']);
     sendResponse(res, 200, 'User deleted successfully');
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const uploadDocument = async (req, res, next) => {
+  try {
+    const userId = Number(req.params.id);
+    const { type } = req.query;
+    if (!req.file) {
+      return sendResponse(res, 400, 'No file uploaded');
+    }
+
+    const documentTypes = {
+      passport: { key: 'hasPassport', urlKey: 'passportUrl', formats: ['pdf', 'jpg', 'jpeg', 'png'] },
+      license: { key: 'hasLicense', urlKey: 'licenseUrl', formats: ['pdf', 'jpg', 'jpeg', 'png'] },
+      nib: { key: 'hasNIB', urlKey: 'nibUrl', formats: ['pdf', 'jpg', 'jpeg', 'png'] },
+      resume: { key: 'hasResume', urlKey: 'resumeUrl', formats: ['pdf', 'doc', 'docx'] },
+      profilePic: { key: 'hasProfilePic', urlKey: 'avatar', formats: ['jpg', 'jpeg', 'png', 'webp'] },
+      certs: { key: 'hasCerts', urlKey: 'certsUrl', formats: ['pdf', 'jpg', 'jpeg', 'png'] }
+    };
+
+    const docConfig = documentTypes[type];
+    if (!docConfig) {
+      return sendResponse(res, 400, 'Invalid document type');
+    }
+
+    const fileExt = req.file.originalname.split('.').pop().toLowerCase();
+    if (!docConfig.formats.includes(fileExt)) {
+      return sendResponse(res, 400, `Invalid file format. Allowed formats for ${type}: ${docConfig.formats.join(', ')}`);
+    }
+
+    // Stream upload to Cloudinary
+    const uploadStream = () => {
+      return new Promise((resolve, reject) => {
+        const stream = cloudinary.uploader.upload_stream(
+          { folder: 'institutional_vault', resource_type: 'auto' },
+          (error, result) => {
+            if (error) return reject(error);
+            resolve(result);
+          }
+        );
+        stream.end(req.file.buffer);
+      });
+    };
+
+    const uploadResult = await uploadStream();
+    const secureUrl = uploadResult.secure_url;
+
+    const isSuperAdmin = req.user.role?.name === 'SUPER_ADMIN';
+    const tenantIdToFilter = isSuperAdmin ? null : (req.user.tenantId || 1);
+
+    const payload = {
+      [docConfig.key]: true,
+      [docConfig.urlKey]: secureUrl
+    };
+
+    const updatedUser = await userService.updateUser(userId, payload, tenantIdToFilter, req.ip, req.headers['user-agent']);
+    sendResponse(res, 200, 'Document uploaded successfully', updatedUser);
   } catch (error) {
     next(error);
   }
