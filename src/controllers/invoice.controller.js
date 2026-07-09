@@ -54,3 +54,15 @@ export const updateInvoiceStatus = async (req, res, next) => {
     next(error);
   }
 };
+
+export const updateInvoice = async (req, res, next) => {
+  try {
+    const isSuperAdmin = req.user.role?.name === 'SUPER_ADMIN';
+    const tenantIdToFilter = isSuperAdmin ? null : (req.user.tenantId || 1);
+
+    const updatedInvoice = await invoiceService.updateInvoice(Number(req.params.id), req.body, tenantIdToFilter, req.user.id);
+    sendResponse(res, 200, 'Invoice updated successfully', updatedInvoice);
+  } catch (error) {
+    next(error);
+  }
+};

@@ -1,5 +1,6 @@
 import * as invoiceRepo from '../repositories/invoice.repository.js';
 import * as deliveryRepo from '../repositories/delivery.repository.js';
+import prisma from '../config/db.js';
 import AppError from '../utils/AppError.js';
 import { logAudit } from '../utils/audit.js';
 
@@ -85,13 +86,22 @@ export const generateInvoice = async (data, performerId, tenantId) => {
   return newInvoice;
 };
 
+
+
 export const getInvoices = async (tenantId, query) => {
   return await invoiceRepo.findAllInvoices(tenantId, query);
 };
 
 export const getInvoiceById = async (id, tenantId, clientId = null) => {
   const invoice = await invoiceRepo.findInvoiceById(id);
-  if (!invoice || (tenantId !== null && invoice.tenantId !== tenantId) || (clientId !== null && invoice.clientId !== clientId)) {
+  if (!invoice) {
+    throw new AppError('Invoice not found', 404);
+  }
+  // Only enforce tenant isolation when tenantId is explicitly provided
+  if (tenantId !== null && tenantId !== undefined && invoice.tenantId !== tenantId) {
+    throw new AppError('Invoice not found', 404);
+  }
+  if (clientId !== null && clientId !== undefined && invoice.clientId !== clientId) {
     throw new AppError('Invoice not found', 404);
   }
   return invoice;
@@ -126,4 +136,97 @@ export const updateInvoiceStatus = async (id, status, tenantId, performerId) => 
   });
 
   return updatedInvoice;
+};
+
+const mapStatusToDb = (status) => {
+  if (!status) return undefined;
+  const s = status.toLowerCase().replace(/\s+/g, '_');
+  if (s === 'unpaid') return 'generated';
+  if (s === 'partially_paid') return 'partially_paid';
+  if (s === 'paid') return 'paid';
+  if (s === 'overdue') return 'overdue';
+  if (s === 'cancelled') return 'cancelled';
+  return s;
+};
+
+export const updateInvoice = async (id, data, tenantId, performerId) => {
+  const invoice = await getInvoiceById(id, tenantId);
+  // Always work with the resolved integer primary key from the database record
+  const invoiceId = invoice.id;
+
+  const updateData = {};
+  if (data.totalAmount !== undefined) updateData.totalAmount = Number(data.totalAmount);
+  if (data.dueDate !== undefined) updateData.dueDate = new Date(data.dueDate);
+  if (data.clientId !== undefined) updateData.clientId = Number(data.clientId);
+  if (data.orderId !== undefined) updateData.orderId = Number(data.orderId);
+
+  // Auto-derive status from amounts and due date — ignore whatever the client sent
+  const totalAmount = data.totalAmount !== undefined ? Number(data.totalAmount) : invoice.totalAmount;
+  const targetPaid = data.paidAmount !== undefined ? Number(data.paidAmount) : (invoice.paidAmount || 0);
+  const dueDate = data.dueDate !== undefined ? new Date(data.dueDate) : invoice.dueDate;
+  const now = new Date();
+
+  if (data.status === 'Cancelled' || data.status === 'cancelled') {
+    // Only set cancelled when explicitly requested
+    updateData.status = 'cancelled';
+  } else if (targetPaid >= totalAmount && totalAmount > 0) {
+    updateData.status = 'paid';
+  } else if (targetPaid > 0 && targetPaid < totalAmount) {
+    updateData.status = 'partially_paid';
+  } else if (dueDate && dueDate < now && targetPaid < totalAmount) {
+    updateData.status = 'overdue';
+  } else {
+    updateData.status = 'generated';
+  }
+
+  const updatedInvoice = await prisma.invoice.update({
+    where: { id: invoiceId },
+    data: updateData,
+    include: { payments: true }
+  });
+
+  if (data.paidAmount !== undefined) {
+    const currentPaid = invoice.payments ? invoice.payments.reduce((sum, p) => sum + p.amount, 0) : 0;
+
+    if (Math.abs(currentPaid - targetPaid) > 0.01) {
+      await prisma.payment.deleteMany({ where: { invoiceId } });
+      if (targetPaid > 0) {
+        await prisma.payment.create({
+          data: {
+            tenantId: updatedInvoice.tenantId,
+            invoiceId,
+            amount: targetPaid,
+            paymentDate: new Date(),
+            paymentMethod: 'bank_transfer',
+            referenceNumber: `ADJ-${Date.now().toString().slice(-6)}`
+          }
+        });
+      }
+    }
+  }
+
+  const finalInvoice = await prisma.invoice.findUnique({
+    where: { id: invoiceId },
+    include: {
+      items: { include: { item: true } },
+      client: true,
+      order: true,
+      delivery: true,
+      payments: true
+    }
+  });
+
+  const paidAmount = finalInvoice.payments ? finalInvoice.payments.reduce((sum, p) => sum + p.amount, 0) : 0;
+  const result = { ...finalInvoice, paidAmount };
+
+  await logAudit({
+    module: 'INVOICES',
+    action: 'UPDATE',
+    description: `Updated Invoice ${invoice.invoiceNumber}. New Total: ${result.totalAmount}, Paid: ${paidAmount}, Status: ${result.status}`,
+    oldValue: invoice,
+    newValue: result,
+    performedBy: performerId
+  });
+
+  return result;
 };

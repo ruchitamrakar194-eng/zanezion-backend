@@ -63,6 +63,7 @@ import itemRoutes from './routes/item.routes.js';
 import warehouseRoutes from './routes/warehouse.routes.js';
 import grnRoutes from './routes/grn.routes.js';
 import stockRoutes from './routes/stock.routes.js';
+import inventoryRoutes from './routes/inventory.routes.js';
 
 // Clients & Orders Layer (Phase 7)
 import clientRoutes from './routes/client.routes.js';
@@ -114,6 +115,7 @@ app.use('/api/v1/items', itemRoutes);
 app.use('/api/v1/warehouses', warehouseRoutes);
 app.use('/api/v1/grns', grnRoutes);
 app.use('/api/v1/stock', stockRoutes);
+app.use('/api/v1/inventory', inventoryRoutes);
 
 // Register Phase 7 routes
 app.use('/api/v1/clients', clientRoutes);

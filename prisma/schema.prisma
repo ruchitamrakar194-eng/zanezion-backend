@@ -269,6 +269,7 @@ model Tenant {
   grns             GRN[]
   inventoryStock   InventoryStock[]
   stockMovements   StockMovement[]
+  lossAssessments  LossAssessment[]
   clients          Client[]
   clientContacts   ClientContact[]
   orders           Order[]
@@ -642,6 +643,7 @@ model Item {
   grnItems       GRNItem[]
   inventoryStock InventoryStock[]
   stockMovements StockMovement[]
+  lossAssessments LossAssessment[]
   orderItems     OrderItem[]
   deliveryItems  DeliveryItem[]
   invoiceItems   InvoiceItem[]
@@ -669,6 +671,7 @@ model Warehouse {
   grns           GRN[]
   inventoryStock InventoryStock[]
   stockMovements StockMovement[]
+  lossAssessments LossAssessment[]
   deliveries     Delivery[]
 
   @@index([tenantId])
@@ -1359,4 +1362,27 @@ model Payroll {
   @@index([userId])
   @@index([status])
   @@map("payrolls")
+}
+
+model LossAssessment {
+  id                  Int      @id @default(autoincrement())
+  tenantId            Int
+  itemId              Int
+  warehouseId         Int
+  quantity            Float
+  lossType            String
+  explanation         String   @db.Text
+  reportedBy          String
+  investigationStatus String   @default("Pending") // Pending, Under Investigation, Confirmed, Closed
+  evidenceUrl         String?
+  createdAt           DateTime @default(now())
+
+  tenant    Tenant    @relation(fields: [tenantId], references: [id])
+  warehouse Warehouse @relation(fields: [warehouseId], references: [id])
+  item      Item      @relation(fields: [itemId], references: [id])
+
+  @@index([tenantId])
+  @@index([itemId])
+  @@index([warehouseId])
+  @@map("loss_assessments")
 }

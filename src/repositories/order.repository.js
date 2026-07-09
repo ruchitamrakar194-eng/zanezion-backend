@@ -119,6 +119,7 @@ export const findAllOrders = async (tenantId, query) => {
       take: Number(limit),
       orderBy: { createdAt: 'desc' },
       include: {
+        items: { include: { item: true } },
         client: { select: { companyName: true, clientCode: true } }
       }
     }),
