@@ -269,3 +269,45 @@ export const updateDelivery = async (id, data, tenantId, performerId, clientId =
 
   return updatedDelivery;
 };
+
+export const deleteDelivery = async (id, tenantId, performerId, clientId = null) => {
+  const delivery = await getDeliveryById(id, tenantId, clientId);
+
+  await prisma.$transaction(async (tx) => {
+    // 1. Unlink Invoices
+    await tx.invoice.updateMany({
+      where: { deliveryId: id },
+      data: { deliveryId: null }
+    });
+
+    // 2. Delete associated proofs
+    await tx.proofOfDelivery.deleteMany({
+      where: { deliveryId: id }
+    });
+
+    // 3. Delete associated missions
+    await tx.mission.deleteMany({
+      where: { deliveryId: id }
+    });
+
+    // 4. Delete associated items
+    await tx.deliveryItem.deleteMany({
+      where: { deliveryId: id }
+    });
+
+    // 5. Finally delete the delivery itself
+    await tx.delivery.delete({
+      where: { id }
+    });
+  });
+
+  await logAudit({
+    module: 'DELIVERIES',
+    action: 'DELETE',
+    description: `Deleted Delivery ${delivery.deliveryNumber}`,
+    oldValue: delivery,
+    performedBy: performerId
+  });
+
+  return true;
+};

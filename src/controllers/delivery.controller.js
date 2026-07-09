@@ -70,3 +70,16 @@ export const updateDelivery = async (req, res, next) => {
     next(error);
   }
 };
+
+export const deleteDelivery = async (req, res, next) => {
+  try {
+    const isSuperAdmin = req.user.role?.name === 'SUPER_ADMIN';
+    const tenantIdToFilter = isSuperAdmin ? null : (req.user.tenantId || 1);
+    const clientIdToFilter = ['BUSINESS_CLIENT', 'INDIVIDUAL_CLIENT'].includes(req.user.role?.name) ? req.user.clientId : null;
+
+    await deliveryService.deleteDelivery(Number(req.params.id), tenantIdToFilter, req.user.id, clientIdToFilter);
+    sendResponse(res, 200, 'Delivery and associated records deleted successfully');
+  } catch (error) {
+    next(error);
+  }
+};
