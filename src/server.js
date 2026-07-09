@@ -25,6 +25,19 @@ async function startServer() {
     await prisma.$connect();
     console.log('✅ Database connected successfully');
 
+    // Auto-seed if database is empty
+    try {
+      const userCount = await prisma.user.count();
+      if (userCount === 0) {
+        console.log('🌱 Database is empty. Running automatic seed scripts...');
+        execSync('node prisma/seed.js', { stdio: 'inherit' });
+        execSync('node prisma/seed_users.js', { stdio: 'inherit' });
+        console.log('✅ Automatic seeding completed successfully');
+      }
+    } catch (seedErr) {
+      console.error('⚠️ Automatic seeding failed:', seedErr.message);
+    }
+
     // Wrap Express app with HTTP server
     const server = http.createServer(app);
     
