@@ -13,6 +13,8 @@ export const createPurchaseRequestSchema = z.object({
   description: z.string().optional(),
   departmentId: z.number().int().positive('Department ID is required'),
   priority: z.enum(['low', 'medium', 'high', 'urgent']).optional(),
+  requester_id: z.number().int().positive().nullable().optional(),
+  requestedBy: z.number().int().positive().nullable().optional(),
   items: z.array(itemSchema).min(1, 'At least one item is required')
 });
 
