@@ -156,18 +156,17 @@ export const startMission = async (id, tenantId, performerId) => {
 };
 
 export const submitPOD = async (id, podData, tenantId, performerId) => {
-  // First, see if the ID corresponds to a Delivery ID with an active mission
-  let mission = await prisma.mission.findFirst({
-      where: { deliveryId: Number(id), status: { notIn: ['completed', 'cancelled'] } }
-  });
+  // First, check if it's an actual Mission ID
+  let mission = await missionRepo.findMissionById(id);
+  if (mission && ['completed', 'cancelled'].includes(mission.status)) {
+      mission = null;
+  }
 
-  // If not, fall back to checking if it's an actual Mission ID
+  // If not, see if the ID corresponds to a Delivery ID with an active mission
   if (!mission) {
-      mission = await missionRepo.findMissionById(id);
-      // Prevent overlaps if findMissionById matched a completed mission randomly sharing the ID
-      if (mission && ['completed', 'cancelled'].includes(mission.status)) {
-          mission = null;
-      }
+      mission = await prisma.mission.findFirst({
+          where: { deliveryId: Number(id), status: { notIn: ['completed', 'cancelled'] } }
+      });
   }
 
   if (!mission) {
