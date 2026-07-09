@@ -7,6 +7,6 @@ export const createRFQSchema = z.object({
 });
 
 export const updateRFQStatusSchema = z.object({
-  status: z.enum(['sent', 'received', 'closed'], { required_error: 'Valid status is required' }),
+  status: z.enum(['sent', 'received', 'closed', 'pending', 'accepted', 'rejected', 'expired'], { required_error: 'Valid status is required' }),
   metadata: z.any().optional()
 });
