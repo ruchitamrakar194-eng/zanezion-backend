@@ -53,9 +53,9 @@ export const adjustStock = async (data, performerId, tenantId) => {
       tenantId,
       warehouseId,
       itemId,
-      movementType: 'ADJUSTMENT',
+      movementType: data.movementType || 'ADJUSTMENT',
       quantity: quantityChange,
-      referenceType: 'MANUAL',
+      referenceType: data.referenceType || 'MANUAL',
       remarks
     });
 

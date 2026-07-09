@@ -5,7 +5,9 @@ export const adjustStockSchema = z.object({
   itemId: z.number().int().positive('Item ID is required'),
   quantity: z.number().positive('Quantity must be positive'),
   type: z.enum(['ADD', 'DEDUCT'], { required_error: 'Type must be ADD or DEDUCT' }),
-  remarks: z.string().optional()
+  remarks: z.string().optional(),
+  referenceType: z.string().optional(),
+  movementType: z.string().optional()
 });
 
 export const transferStockSchema = z.object({

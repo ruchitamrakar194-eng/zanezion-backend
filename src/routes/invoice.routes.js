@@ -11,6 +11,7 @@ router.use(authenticate);
 router.get('/', checkPermission('INVOICES', 'READ'), invoiceController.getInvoices);
 router.get('/:id', checkPermission('INVOICES', 'READ'), invoiceController.getInvoiceById);
 router.post('/', checkPermission('INVOICES', 'MANAGE'), validate(generateInvoiceSchema), invoiceController.generateInvoice);
+router.put('/:id', checkPermission('INVOICES', 'MANAGE'), invoiceController.updateInvoice);
 router.put('/:id/status', checkPermission('INVOICES', 'APPROVE'), invoiceController.updateInvoiceStatus);
 
 export default router;

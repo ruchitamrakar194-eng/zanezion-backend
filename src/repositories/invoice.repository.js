@@ -57,8 +57,14 @@ export const createInvoice = async (data, items, tenantId) => {
 };
 
 export const findInvoiceById = async (id) => {
-  return await prisma.invoice.findUnique({
-    where: { id },
+  // Support lookup by both integer primary key AND invoiceNumber string
+  const numericId = Number(id);
+  const where = !isNaN(numericId) && numericId > 0
+    ? { id: numericId }
+    : { invoiceNumber: String(id) };
+
+  const inv = await prisma.invoice.findFirst({
+    where,
     include: {
       items: { include: { item: true } },
       client: true,
@@ -67,6 +73,9 @@ export const findInvoiceById = async (id) => {
       payments: true
     }
   });
+  if (!inv) return null;
+  const paidAmount = inv.payments ? inv.payments.reduce((sum, p) => sum + p.amount, 0) : 0;
+  return { ...inv, paidAmount };
 };
 
 export const findAllInvoices = async (tenantId, query) => {
