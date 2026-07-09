@@ -1,13 +1,16 @@
 import prisma from '../config/db.js';
 
 const generateOrderNumber = async (tenantId) => {
-  const count = await prisma.order.count({ where: { tenantId } });
-  return `ORD-${new Date().getFullYear()}-${String(count + 1).padStart(4, '0')}`;
+  const lastOrder = await prisma.order.findFirst({
+    orderBy: { id: 'desc' }
+  });
+  const nextNum = lastOrder ? lastOrder.id + 1 : 1;
+  return `ORD-${new Date().getFullYear()}-${String(nextNum).padStart(4, '0')}`;
 };
 
 export const createOrder = async (data, items, tenantId) => {
   return await prisma.$transaction(async (tx) => {
-    const orderNumber = await generateOrderNumber(tenantId);
+    const orderNumber = data.orderNumber || await generateOrderNumber(tenantId);
     
     const itemsArray = items || [];
     let computedTotalAmount = itemsArray.reduce((sum, item) => sum + (item.quantity * item.unitPrice), 0);

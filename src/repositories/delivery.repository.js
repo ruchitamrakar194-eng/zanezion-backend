@@ -1,8 +1,11 @@
 import prisma from '../config/db.js';
 
 const generateDeliveryNumber = async (tenantId) => {
-  const count = await prisma.delivery.count({ where: { tenantId } });
-  return `DEL-${new Date().getFullYear()}-${String(count + 1).padStart(4, '0')}`;
+  const lastDelivery = await prisma.delivery.findFirst({
+    orderBy: { id: 'desc' }
+  });
+  const nextNum = lastDelivery ? lastDelivery.id + 1 : 1;
+  return `DEL-${new Date().getFullYear()}-${String(nextNum).padStart(4, '0')}`;
 };
 
 export const createDelivery = async (data, items, tenantId) => {

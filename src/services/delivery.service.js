@@ -10,7 +10,33 @@ export const createDelivery = async (data, performerId, tenantId) => {
 
   let order;
   if (data.orderId) {
-    order = await orderRepo.findOrderById(data.orderId);
+    order = await orderRepo.findOrderById(Number(data.orderId));
+    if (!order) {
+      const strId = String(data.orderId);
+      if (strId.length >= 8) {
+        const formattedRef = `ORD-${strId.slice(0, 4)}-${strId.slice(4)}`;
+        order = await prisma.order.findFirst({
+          where: {
+            orderNumber: formattedRef,
+            ...(tenantId !== null && { tenantId })
+          },
+          include: { items: true }
+        });
+      }
+    }
+    if (!order) {
+      order = await prisma.order.findFirst({
+        where: {
+          orderNumber: String(data.orderId),
+          ...(tenantId !== null && { tenantId })
+        },
+        include: { items: true }
+      });
+    }
+    if (order) {
+      data.orderId = order.id;
+      deliveryData.orderId = order.id;
+    }
   }
 
   if (!order || (tenantId !== null && order.tenantId !== tenantId)) {
@@ -51,7 +77,18 @@ export const createDelivery = async (data, performerId, tenantId) => {
     const employee = await prisma.employee.findUnique({ where: { userId: performerId } });
     const orderCreatedById = employee ? employee.id : 1;
 
+    let orderNumberToUse = undefined;
+    if (data.orderId) {
+      const strId = String(data.orderId);
+      if (strId.startsWith('ORD-')) {
+        orderNumberToUse = strId;
+      } else if (strId.length >= 8) {
+        orderNumberToUse = `ORD-${strId.slice(0, 4)}-${strId.slice(4)}`;
+      }
+    }
+
     order = await orderRepo.createOrder({
+      orderNumber: orderNumberToUse,
       clientId: clientIdToUse,
       createdById: orderCreatedById,
       status: 'approved',
