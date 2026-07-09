@@ -31,6 +31,7 @@ export const createUserSchema = z.object({
 export const updateUserSchema = z.object({
   body: z.object({
     name: z.string().min(2).optional(),
+    email: z.string().email('Invalid email address').optional(),
     phone: z.string().nullable().optional(),
     roleId: z.coerce.number().int().positive('Role is required').optional(),
     status: z.string().optional(),
@@ -50,5 +51,16 @@ export const updateUserSchema = z.object({
     nibUrl: z.string().nullable().optional(),
     resumeUrl: z.string().nullable().optional(),
     certsUrl: z.string().nullable().optional(),
+    birthday: z.string().nullable().optional(),
+    nibNumber: z.string().nullable().optional(),
+    vacationBalance: z.coerce.number().optional(),
+    employmentStatus: z.string().optional(),
+    bankingInfo: z.object({
+      bank: z.string().nullable().optional(),
+      account: z.string().nullable().optional(),
+      routing: z.string().nullable().optional(),
+      method: z.string().nullable().optional(),
+    }).optional(),
+    isSalaried: z.boolean().optional(),
   }),
 });

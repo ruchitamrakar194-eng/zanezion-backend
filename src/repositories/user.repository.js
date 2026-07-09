@@ -1,7 +1,17 @@
 import prisma from '../config/db.js';
 
 export const createUser = async (data) => {
-  return await prisma.user.create({ data });
+  const prismaData = { ...data };
+  delete prismaData.vacation_balance;
+  delete prismaData.nib_number;
+  delete prismaData.employment_status;
+  delete prismaData.banking_info;
+
+  if (prismaData.birthday) {
+    prismaData.birthday = new Date(prismaData.birthday);
+  }
+
+  return await prisma.user.create({ data: prismaData });
 };
 
 export const findUserByEmailAndTenant = async (email, tenantId) => {
@@ -75,9 +85,21 @@ export const findAllUsersByTenant = async (tenantId, query) => {
 };
 
 export const updateUser = async (id, data) => {
+  const prismaData = { ...data };
+  delete prismaData.id;
+  delete prismaData.role;
+  delete prismaData.vacation_balance;
+  delete prismaData.nib_number;
+  delete prismaData.employment_status;
+  delete prismaData.banking_info;
+
+  if (prismaData.birthday) {
+    prismaData.birthday = new Date(prismaData.birthday);
+  }
+
   return await prisma.user.update({
     where: { id },
-    data
+    data: prismaData
   });
 };
 
