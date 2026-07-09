@@ -31,6 +31,7 @@ export const createUserSchema = z.object({
 export const updateUserSchema = z.object({
   body: z.object({
     name: z.string().min(2).optional(),
+    email: z.string().email('Invalid email address').optional(),
     phone: z.string().nullable().optional(),
     roleId: z.coerce.number().int().positive('Role is required').optional(),
     status: z.string().optional(),
