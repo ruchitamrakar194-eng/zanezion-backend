@@ -60,7 +60,7 @@ export const findAllMissions = async (tenantId, query) => {
       take: Number(limit),
       orderBy: { createdAt: 'desc' },
       include: {
-        delivery: { select: { deliveryNumber: true, client: { select: { companyName: true } } } },
+        delivery: { select: { deliveryNumber: true, pickupLocation: true, dropLocation: true, client: { select: { companyName: true, address: true, city: true, country: true } } } },
           assignee: { select: { firstName: true, lastName: true, vehiclePlate: true, vehicleModel: true, vehicleType: true } }
       }
     }),
