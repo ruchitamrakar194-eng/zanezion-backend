@@ -346,6 +346,7 @@ export const receivePurchaseOrderGoods = async (id, body, tenantId, performerId)
                 unitId: unit.id,
                 sku,
                 name: dbItem.itemName,
+                price: Number(dbItem.estimatedCost || 0),
                 status: 'active'
               }
             });
