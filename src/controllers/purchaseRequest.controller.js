@@ -4,6 +4,11 @@ import { sendResponse } from '../utils/response.js';
 export const createPurchaseRequest = async (req, res, next) => {
   try {
     console.log('CREATE PR REQUEST BODY:', req.body);
+    try {
+      import('fs').then(fs => {
+        fs.writeFileSync('debug_pr_payload.json', JSON.stringify({ body: req.body, user: req.user }, null, 2));
+      });
+    } catch (e) {}
     const isSuperAdmin = req.user.role?.name === 'SUPER_ADMIN';
     const tenantIdToUse = isSuperAdmin ? (req.body.tenantId || req.user.tenantId || 1) : (req.user.tenantId || 1);
 
