@@ -16,10 +16,10 @@ export const createUser = async (data) => {
 
 export const findUserByEmailAndTenant = async (email, tenantId) => {
   return await prisma.user.findFirst({
-    where: { 
-      email, 
+    where: {
+      email,
       ...(tenantId !== null && { tenantId }),
-      deletedAt: null 
+      deletedAt: null
     },
     include: { role: true }
   });
