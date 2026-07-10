@@ -143,8 +143,12 @@ export const getProfile = async (userId) => {
   if (!user) throw new AppError('User not found', 404);
   user.password = undefined;
 
-  if ((user.role?.name === 'BUSINESS_CLIENT' || user.role?.name === 'SAAS_CLIENT') && user.tenantId) {
-    const client = await prisma.client.findFirst({ where: { tenantId: user.tenantId } });
+  // Attach client info
+  if (user.tenantId) {
+    let client = await prisma.client.findFirst({ where: { email: user.email } });
+    if (!client) {
+      client = await prisma.client.findFirst({ where: { tenantId: user.tenantId } });
+    }
     if (client) {
       user.clientId = client.id;
       user.company_id = client.id;
