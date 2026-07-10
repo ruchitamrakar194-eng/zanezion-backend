@@ -19,9 +19,12 @@ export const loginUser = async (email, password, tenantId, ipAddress, userAgent)
     throw new AppError('Invalid credentials', 401);
   }
 
-  // Attach client info if business or saas client or staff
-  if ((user.role?.name === 'BUSINESS_CLIENT' || user.role?.name === 'SAAS_CLIENT' || user.role?.name === 'STAFF') && user.tenantId) {
-    const client = await prisma.client.findFirst({ where: { tenantId: user.tenantId } });
+  // Attach client info
+  if (user.tenantId) {
+    let client = await prisma.client.findFirst({ where: { email: user.email } });
+    if (!client) {
+      client = await prisma.client.findFirst({ where: { tenantId: user.tenantId } });
+    }
     if (client) {
       user.clientId = client.id;
       user.company_id = client.id;
