@@ -11,7 +11,7 @@ const generateDeliveryNumber = async (tenantId) => {
 export const createDelivery = async (data, items, tenantId) => {
   return await prisma.$transaction(async (tx) => {
     const deliveryNumber = await generateDeliveryNumber(tenantId);
-    
+
     // Parse Date fields if they exist
     const parsedData = { ...data };
     if (parsedData.etaSchedule) parsedData.etaSchedule = new Date(parsedData.etaSchedule);
@@ -112,7 +112,7 @@ export const updateDelivery = async (id, data) => {
   delete parsedData.items;
   delete parsedData.deliveryNumber;
   delete parsedData.tenantId;
-  
+
   return await prisma.delivery.update({
     where: { id },
     data: parsedData,

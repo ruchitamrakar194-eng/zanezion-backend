@@ -11,10 +11,10 @@ export const createMission = async (data, performerId, tenantId) => {
     if (!delivery || (tenantId !== null && delivery.tenantId !== tenantId)) {
       throw new AppError('Delivery not found', 404);
     }
-    
+
     // Check if an active mission already exists for this delivery
     const activeMission = await prisma.mission.findFirst({
-        where: { deliveryId: delivery.id, status: { notIn: ['completed', 'cancelled'] } }
+      where: { deliveryId: delivery.id, status: { notIn: ['completed', 'cancelled'] } }
     });
   }
 
@@ -35,7 +35,7 @@ export const createMission = async (data, performerId, tenantId) => {
         const effectiveTenantId = user.tenantId || tenantId || 1;
         let defaultDept = await prisma.department.findFirst({ where: { tenantId: effectiveTenantId, name: 'Operations' } });
         if (!defaultDept) defaultDept = await prisma.department.create({ data: { tenantId: effectiveTenantId, name: 'Operations', code: 'OPS-01' } });
-        
+
         let defaultDesig = await prisma.designation.findFirst({ where: { tenantId: effectiveTenantId, name: 'Field Staff' } });
         if (!defaultDesig) defaultDesig = await prisma.designation.create({ data: { tenantId: effectiveTenantId, departmentId: defaultDept.id, name: 'Field Staff' } });
 
@@ -65,18 +65,18 @@ export const createMission = async (data, performerId, tenantId) => {
   // If a mission already exists, just update its assigned employee and we're done
   if (data.deliveryId) {
     const activeMission = await prisma.mission.findFirst({
-        where: { deliveryId: data.deliveryId, status: { notIn: ['completed', 'cancelled'] } }
+      where: { deliveryId: data.deliveryId, status: { notIn: ['completed', 'cancelled'] } }
     });
     if (activeMission) {
-       await prisma.mission.update({
-           where: { id: activeMission.id },
-           data: { assignedEmployeeId: employee.id }
-       });
-       await prisma.delivery.update({
-           where: { id: data.deliveryId },
-           data: { assignedTo: employee.id }
-       });
-       return await missionRepo.findMissionById(activeMission.id);
+      await prisma.mission.update({
+        where: { id: activeMission.id },
+        data: { assignedEmployeeId: employee.id }
+      });
+      await prisma.delivery.update({
+        where: { id: data.deliveryId },
+        data: { assignedTo: employee.id }
+      });
+      return await missionRepo.findMissionById(activeMission.id);
     }
   }
 
@@ -105,43 +105,43 @@ export const startMission = async (id, tenantId, performerId) => {
   await prisma.$transaction(async (tx) => {
     // 1. Update Mission
     await missionRepo.updateMissionStatus(tx, mission.id, 'in_progress', { startDate: new Date() });
-    
+
     // 2. Update Delivery and Inventory ONLY if this is a Delivery Mission
     if (delivery) {
       await deliveryRepo.updateDeliveryStatus(tx, delivery.id, 'dispatched', { dispatchDate: new Date() });
 
-    // 3. Dispatch Engine: Deduct Inventory Stock (Quantity & Reserved)
-    for (const item of delivery.items) {
-      const stock = await tx.inventoryStock.findUnique({
-        where: { warehouseId_itemId: { warehouseId: delivery.warehouseId, itemId: item.itemId } }
-      });
+      // 3. Dispatch Engine: Deduct Inventory Stock (Quantity & Reserved)
+      for (const item of delivery.items) {
+        const stock = await tx.inventoryStock.findUnique({
+          where: { warehouseId_itemId: { warehouseId: delivery.warehouseId, itemId: item.itemId } }
+        });
 
-      if (!stock || stock.quantity < item.quantity || stock.reservedQuantity < item.quantity) {
-         console.warn(`[Dispatch Engine] Bypassed inventory check: Insufficient physical or reserved stock for Item ${item.itemId}.`);
-         continue;
+        if (!stock || stock.quantity < item.quantity || stock.reservedQuantity < item.quantity) {
+          console.warn(`[Dispatch Engine] Bypassed inventory check: Insufficient physical or reserved stock for Item ${item.itemId}.`);
+          continue;
+        }
+
+        await tx.inventoryStock.update({
+          where: { id: stock.id },
+          data: {
+            quantity: { decrement: item.quantity },
+            reservedQuantity: { decrement: item.quantity }
+          }
+        });
+
+        // Log Stock Movement
+        await tx.stockMovement.create({
+          data: {
+            tenantId: delivery.tenantId,
+            warehouseId: delivery.warehouseId,
+            itemId: item.itemId,
+            movementType: 'OUT',
+            quantity: item.quantity,
+            referenceType: 'DELIVERY',
+            remarks: `Dispatched via Mission ${mission.missionNumber} (Delivery ID: ${delivery.id})`
+          }
+        });
       }
-
-      await tx.inventoryStock.update({
-        where: { id: stock.id },
-        data: {
-          quantity: { decrement: item.quantity },
-          reservedQuantity: { decrement: item.quantity }
-        }
-      });
-
-      // Log Stock Movement
-      await tx.stockMovement.create({
-        data: {
-          tenantId: delivery.tenantId,
-          warehouseId: delivery.warehouseId,
-          itemId: item.itemId,
-          movementType: 'OUT',
-          quantity: item.quantity,
-          referenceType: 'DELIVERY',
-          remarks: `Dispatched via Mission ${mission.missionNumber} (Delivery ID: ${delivery.id})`
-        }
-      });
-    }
     } // End if delivery
   });
 
@@ -159,68 +159,68 @@ export const submitPOD = async (id, podData, tenantId, performerId) => {
   // First, check if it's an actual Mission ID
   let mission = await missionRepo.findMissionById(id);
   if (mission && ['completed', 'cancelled'].includes(mission.status)) {
-      mission = null;
+    mission = null;
   }
 
   // If not, see if the ID corresponds to a Delivery ID with an active mission
   if (!mission) {
-      mission = await prisma.mission.findFirst({
-          where: { deliveryId: Number(id), status: { notIn: ['completed', 'cancelled'] } }
-      });
+    mission = await prisma.mission.findFirst({
+      where: { deliveryId: Number(id), status: { notIn: ['completed', 'cancelled'] } }
+    });
   }
 
   if (!mission) {
-     // If STILL no active mission, it means this delivery was never "dispatched" officially through a mission.
-     // We can just complete the delivery directly!
-     const delivery = await deliveryRepo.findDeliveryById(Number(id));
-     if (!delivery) throw new AppError('Delivery/Mission not found', 404);
-     
-     if (['delivered', 'cancelled'].includes(delivery.status)) {
-         throw new AppError(`Cannot complete a delivery in ${delivery.status} status`, 400);
-     }
-     
-     await prisma.$transaction(async (tx) => {
-         const routeDistance = delivery.routeDistance || 0;
-         // Frontend saves Rate per KM as staffPayRate, and total payout as deliveryFee.
-         const tripEarning = delivery.deliveryFee || (routeDistance * (delivery.staffPayRate || 0));
+    // If STILL no active mission, it means this delivery was never "dispatched" officially through a mission.
+    // We can just complete the delivery directly!
+    const delivery = await deliveryRepo.findDeliveryById(Number(id));
+    if (!delivery) throw new AppError('Delivery/Mission not found', 404);
 
-         await deliveryRepo.updateDeliveryStatus(tx, Number(id), 'delivered', { 
-           deliveryDate: new Date()
-         });
-         await missionRepo.createPOD(tx, Number(id), tenantId || delivery.tenantId, podData);
+    if (['delivered', 'cancelled'].includes(delivery.status)) {
+      throw new AppError(`Cannot complete a delivery in ${delivery.status} status`, 400);
+    }
 
-         // Accumulate Staff Earning to Payroll
-         if (delivery.assignedTo) {
-           const employee = await tx.employee.findUnique({ where: { id: delivery.assignedTo } });
-           if (employee && employee.userId) {
-             const payroll = await tx.payroll.findFirst({ where: { userId: employee.userId, status: 'Pending' } });
-             if (payroll) {
-               await tx.payroll.update({ 
-                 where: { id: payroll.id }, 
-                 data: { bonus: { increment: tripEarning }, netAmount: { increment: tripEarning } } 
-               });
-             } else {
-               await tx.payroll.create({ 
-                 data: { 
-                   tenantId: employee.tenantId, 
-                   userId: employee.userId, 
-                   bonus: tripEarning, 
-                   netAmount: tripEarning, 
-                   status: 'Pending' 
-                 } 
-               });
-             }
-           }
-         }
-     });
-     
-     await logAudit({
-        module: 'DELIVERIES',
-        action: 'COMPLETE',
-        description: `Delivery ${delivery.deliveryNumber} completed via direct POD.`,
-        performedBy: performerId
-     });
-     return true;
+    await prisma.$transaction(async (tx) => {
+      const routeDistance = delivery.routeDistance || 0;
+      // Frontend saves Rate per KM as staffPayRate, and total payout as deliveryFee.
+      const tripEarning = delivery.deliveryFee || (routeDistance * (delivery.staffPayRate || 0));
+
+      await deliveryRepo.updateDeliveryStatus(tx, Number(id), 'delivered', {
+        deliveryDate: new Date()
+      });
+      await missionRepo.createPOD(tx, Number(id), tenantId || delivery.tenantId, podData);
+
+      // Accumulate Staff Earning to Payroll
+      if (delivery.assignedTo) {
+        const employee = await tx.employee.findUnique({ where: { id: delivery.assignedTo } });
+        if (employee && employee.userId) {
+          const payroll = await tx.payroll.findFirst({ where: { userId: employee.userId, status: 'Pending' } });
+          if (payroll) {
+            await tx.payroll.update({
+              where: { id: payroll.id },
+              data: { bonus: { increment: tripEarning }, netAmount: { increment: tripEarning } }
+            });
+          } else {
+            await tx.payroll.create({
+              data: {
+                tenantId: employee.tenantId,
+                userId: employee.userId,
+                bonus: tripEarning,
+                netAmount: tripEarning,
+                status: 'Pending'
+              }
+            });
+          }
+        }
+      }
+    });
+
+    await logAudit({
+      module: 'DELIVERIES',
+      action: 'COMPLETE',
+      description: `Delivery ${delivery.deliveryNumber} completed via direct POD.`,
+      performedBy: performerId
+    });
+    return true;
   }
 
   if (!mission || (tenantId !== null && mission.tenantId !== tenantId)) throw new AppError('Mission not found', 404);
@@ -235,7 +235,7 @@ export const submitPOD = async (id, podData, tenantId, performerId) => {
 
     // 2. Update Mission
     await missionRepo.updateMissionStatus(tx, mission.id, 'completed', { endDate: new Date() });
-    
+
     // 3. Update Delivery & Calculate Earnings
     if (mission.deliveryId) {
       const delivery = await tx.delivery.findUnique({ where: { id: mission.deliveryId } });
@@ -243,7 +243,7 @@ export const submitPOD = async (id, podData, tenantId, performerId) => {
       // Frontend saves Rate per KM as staffPayRate, and total payout as deliveryFee.
       const tripEarning = delivery?.deliveryFee || (routeDistance * (delivery?.staffPayRate || 0));
 
-      await deliveryRepo.updateDeliveryStatus(tx, mission.deliveryId, 'delivered', { 
+      await deliveryRepo.updateDeliveryStatus(tx, mission.deliveryId, 'delivered', {
         deliveryDate: new Date()
       });
 
@@ -253,19 +253,19 @@ export const submitPOD = async (id, podData, tenantId, performerId) => {
         if (employee && employee.userId) {
           const payroll = await tx.payroll.findFirst({ where: { userId: employee.userId, status: 'Pending' } });
           if (payroll) {
-            await tx.payroll.update({ 
-              where: { id: payroll.id }, 
-              data: { bonus: { increment: tripEarning }, netAmount: { increment: tripEarning } } 
+            await tx.payroll.update({
+              where: { id: payroll.id },
+              data: { bonus: { increment: tripEarning }, netAmount: { increment: tripEarning } }
             });
           } else {
-            await tx.payroll.create({ 
-              data: { 
-                tenantId: employee.tenantId, 
-                userId: employee.userId, 
-                bonus: tripEarning, 
-                netAmount: tripEarning, 
-                status: 'Pending' 
-              } 
+            await tx.payroll.create({
+              data: {
+                tenantId: employee.tenantId,
+                userId: employee.userId,
+                bonus: tripEarning,
+                netAmount: tripEarning,
+                status: 'Pending'
+              }
             });
           }
         }
@@ -378,7 +378,7 @@ export const assignMission = async (id, assignData, tenantId, performerId) => {
         ]
       }
     });
-    
+
     // Auto-create employee profile if missing
     if (!employee) {
       const user = await prisma.user.findUnique({ where: { id: Number(assignData.driverId) } });
@@ -392,7 +392,7 @@ export const assignMission = async (id, assignData, tenantId, performerId) => {
             data: { tenantId: effectiveTenantId, name: 'Operations', code: 'OPS-01' }
           });
         }
-        
+
         // Find or create default designation
         let defaultDesig = await prisma.designation.findFirst({ where: { tenantId: effectiveTenantId, name: 'Field Staff' } });
         if (!defaultDesig) {
