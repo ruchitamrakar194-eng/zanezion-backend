@@ -14,7 +14,7 @@ export const createClient = async (req, res, next) => {
     }
 
     const payload = req.body;
-    
+
     // Safely extract and map ONLY the fields known to Prisma schema
     const clientData = {
       clientCode: payload.clientCode || `CLT-${Date.now().toString().slice(-6)}`,
@@ -41,9 +41,9 @@ export const createClient = async (req, res, next) => {
       const existingUser = await prisma.user.findFirst({
         where: { email: client.email }
       });
-      
+
       const roleId = client.clientType === 'SaaS' ? 14 : 13; // Default to SAAS_CLIENT or CUSTOMER
-      
+
       if (!existingUser) {
         await userService.createUser({
           name: client.companyName || 'SaaS Client',
@@ -103,7 +103,7 @@ export const updateClient = async (req, res, next) => {
     const tenantIdToFilter = isSuperAdmin ? null : (req.user.tenantId || 1);
 
     const payload = req.body;
-    
+
     // Safely extract and map ONLY the fields known to Prisma schema
     const clientData = {};
     if (payload.clientCode !== undefined) clientData.clientCode = payload.clientCode;
@@ -123,15 +123,15 @@ export const updateClient = async (req, res, next) => {
     if (payload.source !== undefined) clientData.source = payload.source;
 
     const updatedClient = await clientService.updateClient(Number(req.params.id), clientData, tenantIdToFilter, req.user.id);
-    
+
     // User Provisioning Logic
     if (payload.password && updatedClient.email) {
       const existingUser = await prisma.user.findFirst({
         where: { email: updatedClient.email }
       });
-      
+
       const roleId = updatedClient.clientType === 'SaaS' ? 14 : 13; // Default to SAAS_CLIENT or CUSTOMER
-      
+
       if (existingUser) {
         const hashedPassword = await bcrypt.hash(payload.password, 10);
         await userService.updateUser(existingUser.id, {
