@@ -15,6 +15,7 @@ export const createUser = async (data) => {
 };
 
 export const findUserByEmailAndTenant = async (email, tenantId) => {
+  const normalizedEmail = String(email || '').trim().toLowerCase();
   return await prisma.user.findFirst({
     where: {
       email,
