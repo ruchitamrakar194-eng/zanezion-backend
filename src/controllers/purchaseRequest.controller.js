@@ -3,6 +3,7 @@ import { sendResponse } from '../utils/response.js';
 
 export const createPurchaseRequest = async (req, res, next) => {
   try {
+    console.log('CREATE PR REQUEST BODY:', req.body);
     const isSuperAdmin = req.user.role?.name === 'SUPER_ADMIN';
     const tenantIdToUse = isSuperAdmin ? (req.body.tenantId || req.user.tenantId || 1) : (req.user.tenantId || 1);
 
