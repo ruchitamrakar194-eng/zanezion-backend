@@ -26,7 +26,7 @@ const MENU_NAME_MAPPING = {
   'RECEIPTS': 'Payments',
   'PLANS': 'Plans',
   'SETTINGS': 'Settings',
-  'TENANTS': 'Tenants', 
+  'TENANTS': 'Tenants',
   'SUBSCRIPTIONS': 'Subscriptions',
   'ORGANIZATIONS': 'Organizations',
   'DEPARTMENTS': 'Personnel',
@@ -48,7 +48,7 @@ export const authenticate = async (req, res, next) => {
     }
 
     const decoded = jwt.verify(token, config.jwtSecret);
-    
+
     // Verify user exists and fetch role
     const user = await prisma.user.findFirst({
       where: { id: decoded.id, deletedAt: null },
@@ -56,7 +56,7 @@ export const authenticate = async (req, res, next) => {
     });
 
     if (!user) {
-       return sendResponse(res, 401, 'User no longer exists');
+      return sendResponse(res, 401, 'User no longer exists');
     }
 
     req.user = user;
@@ -149,19 +149,19 @@ export const checkPermission = (routeIdentifier, action) => {
       }
 
       const isSuperAdmin = roleName === 'SUPER_ADMIN' || roleName === 'superadmin';
-      
+
       if (!hasAccess && !isSuperAdmin) {
         // Implicit bypass for internal staff roles for core operational workflows
         const staffRoles = ['admin', 'operations', 'procurement', 'logistics', 'inventory', 'concierge', 'staff'];
         const isStaff = staffRoles.some(r => roleName.toLowerCase().includes(r));
-        
+
         const operationalRoutes = [
-          'ORDERS', 'PROJECTS', 'MISSIONS', 'DELIVERIES', 'INVOICES', 
+          'ORDERS', 'PROJECTS', 'MISSIONS', 'DELIVERIES', 'INVOICES',
           'VENDORS', 'CLIENTS', 'USERS', 'WAREHOUSES', 'ITEMS', 'STOCK', 'GRN',
           'PURCHASE_REQUESTS', 'QUOTATIONS', 'RFQS', 'PURCHASE_ORDERS',
           'TRACKING', 'ROUTES', 'URGENT', 'SUPPORT', 'CONCIERGE', 'PAYROLL'
         ];
-        
+
         if (action === 'READ' && [...operationalRoutes, 'ROLES'].includes(routeIdentifier) && isStaff) {
           console.log(`[RBAC] Role: ${roleName} | Route: ${routeIdentifier} | Action: ${action} | Result: ALLOWED (Staff Lookup Bypass)`);
           return next();
@@ -178,7 +178,7 @@ export const checkPermission = (routeIdentifier, action) => {
 
       const resultStr = isSuperAdmin && !hasAccess ? 'ALLOWED (Super Admin Bypass)' : 'ALLOWED';
       console.log(`[RBAC] Role: ${roleName} | Route: ${routeIdentifier} | Mapped Menu: ${mappedMenuName || 'UNMAPPED'} | Action: ${action} | Result: ${resultStr}`);
-      
+
       next();
     } catch (error) {
       console.error(`[RBAC Error]`, error);
