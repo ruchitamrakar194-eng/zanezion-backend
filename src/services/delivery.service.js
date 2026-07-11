@@ -256,7 +256,7 @@ export const cancelDelivery = async (id, tenantId, performerId, clientId = null)
 export const updateDelivery = async (id, data, tenantId, performerId, clientId = null) => {
   const delivery = await getDeliveryById(id, tenantId, clientId);
 
-  if (['cancelled', 'delivered'].includes(delivery.status)) {
+  if (['cancelled'].includes(delivery.status) || (delivery.status === 'delivered' && !data.signature)) {
     throw new AppError(`Cannot update delivery in ${delivery.status} status`, 400);
   }
 
@@ -271,9 +271,34 @@ export const updateDelivery = async (id, data, tenantId, performerId, clientId =
   if (parsedData.etaSchedule) parsedData.etaSchedule = new Date(parsedData.etaSchedule);
   if (parsedData.requestDate) parsedData.requestDate = new Date(parsedData.requestDate);
   if (parsedData.dueDate) parsedData.dueDate = new Date(parsedData.dueDate);
+
+  const signature = parsedData.signature;
+  delete parsedData.signature;
+
   delete parsedData.items;
   delete parsedData.deliveryNumber;
   delete parsedData.tenantId;
+
+  if (signature) {
+    const existingPOD = await prisma.proofOfDelivery.findFirst({
+      where: { deliveryId: id }
+    });
+    if (existingPOD) {
+      await prisma.proofOfDelivery.update({
+        where: { id: existingPOD.id },
+        data: { receiverSignature: signature, receiverName: signature }
+      });
+    } else {
+      await prisma.proofOfDelivery.create({
+        data: {
+          deliveryId: id,
+          tenantId: delivery.tenantId,
+          receiverName: signature,
+          receiverSignature: signature
+        }
+      });
+    }
+  }
 
   if (isTransitioningToDispatch) {
     // Run delivery update + stock decrement atomically in one transaction
@@ -312,7 +337,7 @@ export const updateDelivery = async (id, data, tenantId, performerId, clientId =
     });
   } else {
     // No stock changes needed — plain update
-    updatedDelivery = await deliveryRepo.updateDelivery(id, data);
+    updatedDelivery = await deliveryRepo.updateDelivery(id, parsedData);
   }
 
   await logAudit({
