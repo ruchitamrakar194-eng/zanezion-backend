@@ -295,7 +295,7 @@ export const updateDelivery = async (id, data, tenantId, performerId, clientId =
 
   if (signature) {
     const existingPOD = await prisma.proofOfDelivery.findFirst({
-      where: { deliveryId: id }
+      where: { deliveryId: delivery.id }
     });
     if (existingPOD) {
       await prisma.proofOfDelivery.update({
@@ -305,7 +305,7 @@ export const updateDelivery = async (id, data, tenantId, performerId, clientId =
     } else {
       await prisma.proofOfDelivery.create({
         data: {
-          deliveryId: id,
+          deliveryId: delivery.id,
           tenantId: delivery.tenantId,
           receiverName: signature,
           receiverSignature: signature
