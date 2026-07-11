@@ -20,6 +20,7 @@ export const createOrder = async (req, res, next) => {
     if (!parsedClientId || isNaN(parsedClientId) || parsedClientId <= 0) {
       const roleNameLower = (req.user.role?.name || '').toLowerCase();
       const isCustomerRole = ['customer', 'business_client', 'individual_client', 'guest', 'saas_client', 'client', 'unknown'].includes(roleNameLower);
+      const isStaffRole = ['admin', 'operations', 'procurement', 'logistics', 'inventory', 'concierge', 'staff', 'super_admin', 'superadmin'].includes(roleNameLower);
 
       if (isCustomerRole) {
         // 1. Try to find an existing client linked by email
@@ -52,8 +53,15 @@ export const createOrder = async (req, res, next) => {
         }
 
         parsedClientId = clientRecord.id;
+      } else if (isStaffRole) {
+        // Concierge / staff must explicitly select a client — provide a clear error message
+        return res.status(400).json({
+          success: false,
+          message: "Please select a client to create this order",
+          field: "clientId"
+        });
       } else {
-        // Staff/admin must explicitly pass a valid clientId
+        // Unknown role — generic error
         return res.status(400).json({
           success: false,
           message: "Client selection is required",
@@ -61,6 +69,7 @@ export const createOrder = async (req, res, next) => {
         });
       }
     }
+
 
     req.body.clientId = parsedClientId;
 
