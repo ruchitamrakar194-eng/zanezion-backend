@@ -11,7 +11,7 @@ const generateDeliveryNumber = async (tenantId) => {
 export const createDelivery = async (data, items, tenantId) => {
   return await prisma.$transaction(async (tx) => {
     const deliveryNumber = await generateDeliveryNumber(tenantId);
-    
+
     // Parse Date fields if they exist
     const parsedData = { ...data };
     if (parsedData.etaSchedule) parsedData.etaSchedule = new Date(parsedData.etaSchedule);
@@ -87,10 +87,19 @@ export const findAllDeliveries = async (tenantId, query) => {
 };
 
 export const updateDeliveryStatus = async (tx, id, status, extraData = {}) => {
-  return await tx.delivery.update({
+  const updatedDelivery = await tx.delivery.update({
     where: { id },
     data: { status, ...extraData }
   });
+
+  if (status === 'delivered' && updatedDelivery.orderId) {
+    await tx.order.update({
+      where: { id: updatedDelivery.orderId },
+      data: { status: 'completed' }
+    });
+  }
+
+  return updatedDelivery;
 };
 
 // Internal method for validation
@@ -112,10 +121,19 @@ export const updateDelivery = async (id, data) => {
   delete parsedData.items;
   delete parsedData.deliveryNumber;
   delete parsedData.tenantId;
-  
-  return await prisma.delivery.update({
+
+  const updatedDelivery = await prisma.delivery.update({
     where: { id },
     data: parsedData,
     include: { items: true, client: true, order: true }
   });
+
+  if (parsedData.status === 'delivered' && updatedDelivery.orderId) {
+    await prisma.order.update({
+      where: { id: updatedDelivery.orderId },
+      data: { status: 'completed' }
+    });
+  }
+
+  return updatedDelivery;
 };

@@ -1,4 +1,5 @@
 import { PrismaClient } from '@prisma/client';
+
 const prisma = new PrismaClient({
   datasources: {
     db: {
@@ -9,23 +10,26 @@ const prisma = new PrismaClient({
 
 async function main() {
   try {
-    const orders = await prisma.order.findMany({
-      orderBy: { id: 'desc' },
-      take: 10
+    const employee = await prisma.employee.findUnique({
+      where: { userId: 21 }
     });
-    console.log("REPLAY RECENT ORDERS:");
-    for (const o of orders) {
-      console.log(`ID: ${o.id}, orderNumber: ${o.orderNumber}, status: ${o.status}, createdAt: ${o.createdAt}`);
+
+    if (!employee) {
+      console.log("Employee not found for userId 21");
+      return;
     }
 
-    const deliveries = await prisma.delivery.findMany({
+    console.log("EMPLOYEE:", employee.id, employee.firstName, employee.lastName);
+
+    const missions = await prisma.mission.findMany({
+      where: { assignedEmployeeId: employee.id },
       orderBy: { id: 'desc' },
-      take: 10,
-      include: { order: true }
+      include: { delivery: true }
     });
-    console.log("\nREPLAY RECENT DELIVERIES:");
-    for (const d of deliveries) {
-      console.log(`ID: ${d.id}, deliveryNumber: ${d.deliveryNumber}, orderId: ${d.orderId}, orderNumber: ${d.order?.orderNumber}, createdAt: ${d.createdAt}`);
+
+    console.log("\nMISSIONS ASSIGNED TO D.J.:");
+    for (const m of missions) {
+      console.log(`ID: ${m.id}, Number: ${m.missionNumber}, Type: ${m.missionType}, Status: ${m.status}, Delivery ID: ${m.deliveryId}, Delivery Number: ${m.delivery?.deliveryNumber}, CreatedAt: ${m.createdAt}`);
     }
   } catch (error) {
     console.error(error);
