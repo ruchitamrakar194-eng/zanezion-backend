@@ -116,8 +116,8 @@ export const startMission = async (id, tenantId, performerId) => {
           where: { warehouseId_itemId: { warehouseId: delivery.warehouseId, itemId: item.itemId } }
         });
 
-        if (!stock || stock.quantity < item.quantity || stock.reservedQuantity < item.quantity) {
-          console.warn(`[Dispatch Engine] Bypassed inventory check: Insufficient physical or reserved stock for Item ${item.itemId}.`);
+        if (!stock || stock.quantity < item.quantity) {
+          console.warn(`[Dispatch Engine] Bypassed inventory check: Insufficient physical stock for Item ${item.itemId}.`);
           continue;
         }
 
@@ -125,7 +125,7 @@ export const startMission = async (id, tenantId, performerId) => {
           where: { id: stock.id },
           data: {
             quantity: { decrement: item.quantity },
-            reservedQuantity: { decrement: item.quantity }
+            reservedQuantity: stock.reservedQuantity >= item.quantity ? { decrement: item.quantity } : undefined
           }
         });
 
