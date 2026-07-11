@@ -218,7 +218,21 @@ export const getDeliveries = async (tenantId, query) => {
 };
 
 export const getDeliveryById = async (id, tenantId, clientId = null) => {
-  const delivery = await deliveryRepo.findDeliveryById(id);
+  let delivery = await deliveryRepo.findDeliveryById(id);
+  if (!delivery && !isNaN(id)) {
+    delivery = await prisma.delivery.findFirst({
+      where: { orderId: Number(id) },
+      include: {
+        items: { include: { item: true, orderItem: true } },
+        client: true,
+        order: true,
+        assignee: { select: { firstName: true, lastName: true } },
+        warehouse: { select: { name: true } },
+        missions: true,
+        proofs: true
+      }
+    });
+  }
   if (!delivery || (tenantId !== null && delivery.tenantId !== tenantId) || (clientId !== null && delivery.clientId !== clientId)) {
     throw new AppError('Delivery not found', 404);
   }
