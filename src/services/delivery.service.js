@@ -87,6 +87,18 @@ export const createDelivery = async (data, performerId, tenantId) => {
       }
     }
 
+    const validItems = await Promise.all(items.map(async (it) => {
+      const itemExists = it.itemId ? await prisma.item.findUnique({ where: { id: Number(it.itemId) } }) : null;
+      const finalItemId = itemExists ? itemExists.id : defaultItem.id;
+      it.itemId = finalItemId; // Mutate the original item so the validation loop sees the correct ID
+      return {
+        itemId: finalItemId,
+        quantity: it.quantity || 1,
+        unitPrice: 0,
+        warehouseId: adHocWarehouseId
+      };
+    }));
+
     order = await orderRepo.createOrder({
       orderNumber: orderNumberToUse,
       clientId: clientIdToUse,
@@ -94,15 +106,7 @@ export const createDelivery = async (data, performerId, tenantId) => {
       status: 'approved',
       orderType: data.missionType === 'Chauffeur' ? 'Service' : 'Delivery',
       priority: 'high'
-    }, items.map(it => {
-      it.itemId = defaultItem.id; // Mutate the original item so the validation loop sees the correct ID
-      return {
-        itemId: defaultItem.id,
-        quantity: it.quantity || 1,
-        unitPrice: 0,
-        warehouseId: adHocWarehouseId
-      };
-    }), tenantId);
+    }, validItems, tenantId);
 
     data.orderId = order.id;
     deliveryData.orderId = order.id;
@@ -214,7 +218,21 @@ export const getDeliveries = async (tenantId, query) => {
 };
 
 export const getDeliveryById = async (id, tenantId, clientId = null) => {
-  const delivery = await deliveryRepo.findDeliveryById(id);
+  let delivery = await deliveryRepo.findDeliveryById(id);
+  if (!delivery && !isNaN(id)) {
+    delivery = await prisma.delivery.findFirst({
+      where: { orderId: Number(id) },
+      include: {
+        items: { include: { item: true, orderItem: true } },
+        client: true,
+        order: true,
+        assignee: { select: { firstName: true, lastName: true } },
+        warehouse: { select: { name: true } },
+        missions: true,
+        proofs: true
+      }
+    });
+  }
   if (!delivery || (tenantId !== null && delivery.tenantId !== tenantId) || (clientId !== null && delivery.clientId !== clientId)) {
     throw new AppError('Delivery not found', 404);
   }
@@ -252,11 +270,89 @@ export const cancelDelivery = async (id, tenantId, performerId, clientId = null)
 export const updateDelivery = async (id, data, tenantId, performerId, clientId = null) => {
   const delivery = await getDeliveryById(id, tenantId, clientId);
 
-  if (['cancelled', 'delivered'].includes(delivery.status)) {
+  if (['cancelled'].includes(delivery.status) || (delivery.status === 'delivered' && !data.signature)) {
     throw new AppError(`Cannot update delivery in ${delivery.status} status`, 400);
   }
 
-  const updatedDelivery = await deliveryRepo.updateDelivery(id, data);
+  // Determine if we need to dispatch and decrement stock
+  const isTransitioningToDispatch = ['en_route', 'dispatched', 'in_transit'].includes(data.status) && 
+    !['en_route', 'dispatched', 'in_transit', 'delivered'].includes(delivery.status);
+
+  let updatedDelivery;
+
+  // Build the update payload (same logic as deliveryRepo.updateDelivery)
+  const parsedData = { ...data };
+  if (parsedData.etaSchedule) parsedData.etaSchedule = new Date(parsedData.etaSchedule);
+  if (parsedData.requestDate) parsedData.requestDate = new Date(parsedData.requestDate);
+  if (parsedData.dueDate) parsedData.dueDate = new Date(parsedData.dueDate);
+
+  const signature = parsedData.signature;
+  delete parsedData.signature;
+
+  delete parsedData.items;
+  delete parsedData.deliveryNumber;
+  delete parsedData.tenantId;
+
+  if (signature) {
+    const existingPOD = await prisma.proofOfDelivery.findFirst({
+      where: { deliveryId: delivery.id }
+    });
+    if (existingPOD) {
+      await prisma.proofOfDelivery.update({
+        where: { id: existingPOD.id },
+        data: { receiverSignature: signature, receiverName: signature }
+      });
+    } else {
+      await prisma.proofOfDelivery.create({
+        data: {
+          deliveryId: delivery.id,
+          tenantId: delivery.tenantId,
+          receiverName: signature,
+          receiverSignature: signature
+        }
+      });
+    }
+  }
+
+  if (isTransitioningToDispatch) {
+    // Run delivery update + stock decrement atomically in one transaction
+    await prisma.$transaction(async (tx) => {
+      updatedDelivery = await tx.delivery.update({
+        where: { id },
+        data: parsedData,
+        include: { items: true, client: true, order: true }
+      });
+
+      for (const item of delivery.items) {
+        const stock = await tx.inventoryStock.findUnique({
+          where: { warehouseId_itemId: { warehouseId: delivery.warehouseId, itemId: item.itemId } }
+        });
+
+        if (stock) {
+          await tx.inventoryStock.update({
+            where: { id: stock.id },
+            data: { quantity: { decrement: item.quantity } }
+          });
+
+          await tx.stockMovement.create({
+            data: {
+              tenantId: delivery.tenantId,
+              warehouseId: delivery.warehouseId,
+              itemId: item.itemId,
+              movementType: 'OUT',
+              quantity: item.quantity,
+              referenceType: 'DELIVERY',
+              referenceId: String(delivery.id),
+              remarks: `Dispatched via Delivery status update to ${data.status}`
+            }
+          });
+        }
+      }
+    });
+  } else {
+    // No stock changes needed — plain update
+    updatedDelivery = await deliveryRepo.updateDelivery(id, parsedData);
+  }
 
   await logAudit({
     module: 'DELIVERIES',

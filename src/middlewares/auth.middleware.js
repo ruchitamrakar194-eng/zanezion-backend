@@ -167,7 +167,7 @@ export const checkPermission = (routeIdentifier, action) => {
           return next();
         }
 
-        if (['CREATE', 'UPDATE', 'DELETE', 'MANAGE', 'ADJUST', 'TRANSFER', 'APPROVE'].includes(action) && operationalRoutes.includes(routeIdentifier) && isStaff) {
+        if (['CREATE', 'UPDATE', 'DELETE', 'MANAGE', 'ADJUST', 'TRANSFER', 'APPROVE', 'COMPLETE'].includes(action) && operationalRoutes.includes(routeIdentifier) && isStaff) {
           console.log(`[RBAC] Role: ${roleName} | Route: ${routeIdentifier} | Action: ${action} | Result: ALLOWED (Staff Operational Bypass)`);
           return next();
         }
