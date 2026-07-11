@@ -123,6 +123,7 @@ app.use('/api/v1/orders', orderRoutes);
 
 // Register Phase 8 routes
 app.use('/api/v1/deliveries', deliveryRoutes);
+app.use('/api/v1/logistics/deliveries', deliveryRoutes);
 app.use('/api/v1/missions', missionRoutes);
 import trackingRoutes from './routes/tracking.routes.js';
 import securityRoutes from './routes/security.routes.js';

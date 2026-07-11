@@ -13,6 +13,7 @@ router.get('/:id', checkPermission('DELIVERIES', 'READ'), deliveryController.get
 router.post('/', checkPermission('DELIVERIES', 'CREATE'), validate(createDeliverySchema), deliveryController.createDelivery);
 router.put('/:id/cancel', checkPermission('DELIVERIES', 'MANAGE'), deliveryController.cancelDelivery);
 router.put('/:id', checkPermission('DELIVERIES', 'MANAGE'), deliveryController.updateDelivery);
+router.patch('/:id', checkPermission('DELIVERIES', 'MANAGE'), deliveryController.updateDelivery);
 router.delete('/:id', checkPermission('DELIVERIES', 'MANAGE'), deliveryController.deleteDelivery);
 
 export default router;
