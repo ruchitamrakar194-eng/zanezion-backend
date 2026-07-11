@@ -143,7 +143,7 @@ export const startMission = async (id, tenantId, performerId) => {
         });
       }
     } // End if delivery
-  });
+  }, { timeout: 60000 });
 
   await logAudit({
     module: 'MISSIONS',
@@ -212,7 +212,7 @@ export const submitPOD = async (id, podData, tenantId, performerId) => {
           }
         }
       }
-    });
+    }, { timeout: 60000 });
 
     await logAudit({
       module: 'DELIVERIES',
@@ -271,7 +271,7 @@ export const submitPOD = async (id, podData, tenantId, performerId) => {
         }
       }
     }
-  });
+  }, { timeout: 60000 });
 
   await logAudit({
     module: 'MISSIONS',
