@@ -4,6 +4,22 @@ import prisma from '../config/db.js';
 import AppError from '../utils/AppError.js';
 import { logAudit } from '../utils/audit.js';
 
+const resolveClientId = async (id) => {
+  if (!id) return null;
+  const numId = Number(id);
+  if (isNaN(numId)) return null;
+
+  const client = await prisma.client.findUnique({ where: { id: numId } });
+  if (client) return client.id;
+
+  const user = await prisma.user.findUnique({ where: { id: numId } });
+  if (user) {
+    const clientByEmail = await prisma.client.findFirst({ where: { email: user.email } });
+    if (clientByEmail) return clientByEmail.id;
+  }
+  return numId; // Fallback
+};
+
 export const generateInvoice = async (data, performerId, tenantId) => {
   const { items, deliveryId, dueDate } = data;
 
@@ -31,8 +47,9 @@ export const generateInvoice = async (data, performerId, tenantId) => {
       }
     }
 
+    const resolvedClientId = data.clientId ? await resolveClientId(data.clientId) : delivery.clientId;
     invoiceData = {
-      clientId: delivery.clientId,
+      clientId: resolvedClientId,
       orderId: delivery.orderId,
       deliveryId: delivery.id,
       invoiceDate: new Date(),
@@ -63,8 +80,9 @@ export const generateInvoice = async (data, performerId, tenantId) => {
       }
     }
 
+    const resolvedClientId = data.clientId ? await resolveClientId(data.clientId) : order.clientId;
     invoiceData = {
-      clientId: order.clientId,
+      clientId: resolvedClientId,
       orderId: order.id,
       deliveryId: null,
       invoiceDate: new Date(),
@@ -74,6 +92,34 @@ export const generateInvoice = async (data, performerId, tenantId) => {
   }
 
   const newInvoice = await invoiceRepo.createInvoice(invoiceData, items, tenantId);
+
+  if (data.paidAmount && Number(data.paidAmount) > 0) {
+    const paidVal = Number(data.paidAmount);
+    await prisma.payment.create({
+      data: {
+        tenantId: newInvoice.tenantId,
+        invoiceId: newInvoice.id,
+        amount: paidVal,
+        paymentDate: new Date(),
+        paymentMethod: 'bank_transfer',
+        referenceNumber: `DEP-${Date.now().toString().slice(-6)}`
+      }
+    });
+
+    let newStatus = 'generated';
+    if (paidVal >= newInvoice.totalAmount) {
+      newStatus = 'paid';
+    } else if (paidVal > 0) {
+      newStatus = 'partially_paid';
+    }
+
+    await prisma.invoice.update({
+      where: { id: newInvoice.id },
+      data: { status: newStatus }
+    });
+
+    newInvoice.status = newStatus;
+  }
 
   await logAudit({
     module: 'INVOICES',
@@ -157,7 +203,10 @@ export const updateInvoice = async (id, data, tenantId, performerId) => {
   const updateData = {};
   if (data.totalAmount !== undefined) updateData.totalAmount = Number(data.totalAmount);
   if (data.dueDate !== undefined) updateData.dueDate = new Date(data.dueDate);
-  if (data.clientId !== undefined) updateData.clientId = Number(data.clientId);
+  if (data.clientId !== undefined) {
+    const resolvedClientId = await resolveClientId(data.clientId);
+    updateData.clientId = resolvedClientId;
+  }
   if (data.orderId !== undefined) updateData.orderId = Number(data.orderId);
 
   // Auto-derive status from amounts and due date — ignore whatever the client sent
