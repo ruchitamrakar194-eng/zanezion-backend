@@ -58,11 +58,10 @@ export const getCustomers = async (req, res, next) => {
     const isSuperAdmin = req.user.role?.name === 'SUPER_ADMIN';
     const tenantIdToFilter = isSuperAdmin ? null : (req.user.tenantId || 1);
 
-    // A "customer" is effectively a user with role = BUSINESS_CLIENT
-    // The frontend passes include_client_role=1 or roleName=BUSINESS_CLIENT. 
-    // We can just reuse userService.getUsers with a hardcoded role check if needed, 
-    // or just let it pass through req.query to the repo.
-    const query = { ...req.query, roleName: 'BUSINESS_CLIENT' };
+    const query = { ...req.query };
+    if (!req.query.include_all && !req.query.include_client_role) {
+      query.roleName = 'BUSINESS_CLIENT';
+    }
     
     if (['BUSINESS_CLIENT', 'INDIVIDUAL_CLIENT'].includes(req.user.role?.name)) {
       query.clientId = req.user.clientId;
