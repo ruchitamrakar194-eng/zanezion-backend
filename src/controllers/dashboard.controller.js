@@ -93,3 +93,20 @@ export const getDashboardStats = async (req, res, next) => {
     next(error);
   }
 };
+
+export const getDashboardLogs = async (req, res, next) => {
+  try {
+    const tenantId = req.user?.tenantId;
+    const filter = tenantId ? { tenantId } : {};
+
+    const logs = await prisma.auditLog.findMany({
+      where: filter,
+      orderBy: { createdAt: 'desc' },
+      take: 20
+    });
+
+    sendResponse(res, 200, 'Dashboard logs retrieved successfully', logs);
+  } catch (error) {
+    next(error);
+  }
+};
