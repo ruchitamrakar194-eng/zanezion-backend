@@ -97,11 +97,11 @@ export const getDashboardStats = async (req, res, next) => {
 export const getDashboardLogs = async (req, res, next) => {
   try {
     const tenantId = req.user?.tenantId;
-    const filter = tenantId ? { tenantId } : {};
+    const filter = tenantId ? { user: { tenantId } } : {};
 
     const logs = await prisma.auditLog.findMany({
       where: filter,
-      orderBy: { createdAt: 'desc' },
+      orderBy: { timestamp: 'desc' },
       take: 20
     });
 
