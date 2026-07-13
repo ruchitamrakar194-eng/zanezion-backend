@@ -136,10 +136,7 @@ const defaultLuxuryItems = [
   { id: 2, name: "Petrus Pomerol 2015 Red Wine", category: "Beverage", qty: 2, price: 3200, status: "Reserved" }
 ];
 
-const defaultNotifications = [
-  { id: 1, title: "New Purchase Order", message: "Purchase order PO-001 has been issued to Nassau Wine & Spirits.", read: false, createdAt: new Date().toISOString() },
-  { id: 2, title: "Critical Stock Alert", message: "Dom Perignon Champagne stock is below minimum threshold.", read: true, createdAt: new Date().toISOString() }
-];
+const defaultNotifications = [];
 
 const defaultLeave = [
   { id: 1, employee: "Jaheem Brown", type: "Vacation", start: "2026-07-01", end: "2026-07-07", status: "Approved", reason: "Annual Leave" },
