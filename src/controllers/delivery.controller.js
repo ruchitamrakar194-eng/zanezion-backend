@@ -20,7 +20,7 @@ export const getDeliveries = async (req, res, next) => {
     const isSuperAdmin = req.user.role?.name === 'SUPER_ADMIN';
     const tenantIdToFilter = isSuperAdmin && !req.query.tenantId ? null : (req.query.tenantId ? Number(req.query.tenantId) : req.user.tenantId);
 
-    if (['BUSINESS_CLIENT', 'INDIVIDUAL_CLIENT', 'CUSTOMER'].includes(req.user.role?.name?.toUpperCase())) {
+    if (['INDIVIDUAL_CLIENT', 'CUSTOMER'].includes(req.user.role?.name?.toUpperCase())) {
       req.query.clientId = req.user.clientId;
     }
 
@@ -35,7 +35,7 @@ export const getDeliveryById = async (req, res, next) => {
   try {
     const isSuperAdmin = req.user.role?.name === 'SUPER_ADMIN';
     const tenantIdToFilter = isSuperAdmin ? null : (req.user.tenantId || 1);
-    const clientIdToFilter = ['BUSINESS_CLIENT', 'INDIVIDUAL_CLIENT'].includes(req.user.role?.name) ? req.user.clientId : null;
+    const clientIdToFilter = ['INDIVIDUAL_CLIENT'].includes(req.user.role?.name) ? req.user.clientId : null;
 
     const delivery = await deliveryService.getDeliveryById(Number(req.params.id), tenantIdToFilter, clientIdToFilter);
     sendResponse(res, 200, 'Delivery fetched successfully', delivery);
@@ -48,7 +48,7 @@ export const cancelDelivery = async (req, res, next) => {
   try {
     const isSuperAdmin = req.user.role?.name === 'SUPER_ADMIN';
     const tenantIdToFilter = isSuperAdmin ? null : (req.user.tenantId || 1);
-    const clientIdToFilter = ['BUSINESS_CLIENT', 'INDIVIDUAL_CLIENT'].includes(req.user.role?.name) ? req.user.clientId : null;
+    const clientIdToFilter = ['INDIVIDUAL_CLIENT'].includes(req.user.role?.name) ? req.user.clientId : null;
 
     await deliveryService.cancelDelivery(Number(req.params.id), tenantIdToFilter, req.user.id, clientIdToFilter);
     sendResponse(res, 200, 'Delivery cancelled successfully');
@@ -61,7 +61,7 @@ export const updateDelivery = async (req, res, next) => {
   try {
     const isSuperAdmin = req.user.role?.name === 'SUPER_ADMIN';
     const tenantIdToFilter = isSuperAdmin ? null : (req.user.tenantId || 1);
-    const clientIdToFilter = ['BUSINESS_CLIENT', 'INDIVIDUAL_CLIENT'].includes(req.user.role?.name) ? req.user.clientId : null;
+    const clientIdToFilter = ['INDIVIDUAL_CLIENT'].includes(req.user.role?.name) ? req.user.clientId : null;
 
     const delivery = await deliveryService.updateDelivery(Number(req.params.id), req.body, tenantIdToFilter, req.user.id, clientIdToFilter);
     emitToTenant(delivery.tenantId, 'delivery_update', delivery);
@@ -75,7 +75,7 @@ export const deleteDelivery = async (req, res, next) => {
   try {
     const isSuperAdmin = req.user.role?.name === 'SUPER_ADMIN';
     const tenantIdToFilter = isSuperAdmin ? null : (req.user.tenantId || 1);
-    const clientIdToFilter = ['BUSINESS_CLIENT', 'INDIVIDUAL_CLIENT'].includes(req.user.role?.name) ? req.user.clientId : null;
+    const clientIdToFilter = ['INDIVIDUAL_CLIENT'].includes(req.user.role?.name) ? req.user.clientId : null;
 
     await deliveryService.deleteDelivery(Number(req.params.id), tenantIdToFilter, req.user.id, clientIdToFilter);
     sendResponse(res, 200, 'Delivery and associated records deleted successfully');
