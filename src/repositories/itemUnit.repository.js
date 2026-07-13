@@ -13,14 +13,21 @@ export const findAllItemUnits = async (tenantId, query) => {
   const skip = (page - 1) * limit;
 
   const where = {
-    ...(tenantId !== null && { tenantId }),
-    ...(search && {
-      OR: [
-        { name: { contains: search } },
-        { shortName: { contains: search } }
-      ]
-    }),
-    ...(status && { status })
+    AND: [
+      tenantId !== null ? {
+        OR: [
+          { tenantId },
+          { tenantId: 1 }
+        ]
+      } : {},
+      search ? {
+        OR: [
+          { name: { contains: search } },
+          { shortName: { contains: search } }
+        ]
+      } : {},
+      status ? { status } : {}
+    ]
   };
 
   const [units, total] = await Promise.all([
