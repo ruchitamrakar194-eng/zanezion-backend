@@ -28,7 +28,10 @@ export const createWarehouse = async (req, res, next) => {
 export const getWarehouses = async (req, res, next) => {
   try {
     const isSuperAdmin = req.user.role?.name === 'SUPER_ADMIN';
-    const tenantIdToFilter = isSuperAdmin && !req.query.tenantId ? null : (req.query.tenantId ? Number(req.query.tenantId) : req.user.tenantId);
+    const isBusinessClient = req.user.role?.name === 'BUSINESS_CLIENT';
+    const tenantIdToFilter = isSuperAdmin && !req.query.tenantId ? null :
+                             isBusinessClient ? 1 :
+                             (req.query.tenantId ? Number(req.query.tenantId) : req.user.tenantId);
 
     const result = await warehouseService.getWarehouses(tenantIdToFilter, req.query);
     sendResponse(res, 200, 'Warehouses fetched successfully', result);
