@@ -8,13 +8,16 @@ import { logAudit } from '../utils/audit.js';
 export const issueStock = async (data, performerId, tenantId) => {
   const { warehouseId, itemId, quantity, issuedBy, issuedTo, clientId, remarks } = data;
 
+  const isB2BClient = tenantId === 2;
+  const masterTenantId = isB2BClient ? 1 : tenantId;
+
   const warehouse = await warehouseRepo.findWarehouseById(warehouseId);
-  if (!warehouse || (tenantId !== null && warehouse.tenantId !== tenantId)) {
+  if (!warehouse || (masterTenantId !== null && warehouse.tenantId !== masterTenantId)) {
     throw new AppError('Warehouse not found', 404);
   }
 
   const item = await itemRepo.findItemById(itemId);
-  if (!item || (tenantId !== null && item.tenantId !== tenantId)) {
+  if (!item || (masterTenantId !== null && item.tenantId !== masterTenantId)) {
     throw new AppError('Item not found', 404);
   }
 
@@ -24,10 +27,10 @@ export const issueStock = async (data, performerId, tenantId) => {
   }
 
   const result = await prisma.$transaction(async (tx) => {
-    // 1. Deduct stock quantity
-    const updatedStock = await stockRepo.upsertStock(tx, tenantId, warehouseId, itemId, -quantity);
+    // 1. Deduct stock quantity from master inventory
+    const updatedStock = await stockRepo.upsertStock(tx, masterTenantId, warehouseId, itemId, -quantity);
 
-    // 2. Write Stock Movement log (STOCK_ISSUE)
+    // 2. Write Stock Movement log (saved under client's tenantId so they own the history log)
     await stockRepo.recordMovement(tx, {
       tenantId,
       warehouseId,
@@ -55,13 +58,16 @@ export const issueStock = async (data, performerId, tenantId) => {
 export const recordLoss = async (data, performerId, tenantId) => {
   const { warehouseId, itemId, quantity, lossType, explanation, reportedBy, investigationStatus, evidenceUrl } = data;
 
+  const isB2BClient = tenantId === 2;
+  const masterTenantId = isB2BClient ? 1 : tenantId;
+
   const warehouse = await warehouseRepo.findWarehouseById(warehouseId);
-  if (!warehouse || (tenantId !== null && warehouse.tenantId !== tenantId)) {
+  if (!warehouse || (masterTenantId !== null && warehouse.tenantId !== masterTenantId)) {
     throw new AppError('Warehouse not found', 404);
   }
 
   const item = await itemRepo.findItemById(itemId);
-  if (!item || (tenantId !== null && item.tenantId !== tenantId)) {
+  if (!item || (masterTenantId !== null && item.tenantId !== masterTenantId)) {
     throw new AppError('Item not found', 404);
   }
 
@@ -71,10 +77,10 @@ export const recordLoss = async (data, performerId, tenantId) => {
   }
 
   const result = await prisma.$transaction(async (tx) => {
-    // 1. Deduct stock quantity
-    await stockRepo.upsertStock(tx, tenantId, warehouseId, itemId, -quantity);
+    // 1. Deduct stock quantity from master inventory
+    await stockRepo.upsertStock(tx, masterTenantId, warehouseId, itemId, -quantity);
 
-    // 2. Create LossAssessment record (No StockMovement created)
+    // 2. Create LossAssessment record (saved under client's tenantId so they own the assessment)
     const lossRecord = await tx.lossAssessment.create({
       data: {
         tenantId,
