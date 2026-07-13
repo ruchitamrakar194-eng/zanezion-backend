@@ -13,5 +13,6 @@ router.get('/:id', checkPermission('INVOICES', 'READ'), invoiceController.getInv
 router.post('/', checkPermission('INVOICES', 'MANAGE'), validate(generateInvoiceSchema), invoiceController.generateInvoice);
 router.put('/:id', checkPermission('INVOICES', 'MANAGE'), invoiceController.updateInvoice);
 router.put('/:id/status', checkPermission('INVOICES', 'APPROVE'), invoiceController.updateInvoiceStatus);
+router.delete('/:id', checkPermission('INVOICES', 'DELETE'), invoiceController.deleteInvoice);
 
 export default router;

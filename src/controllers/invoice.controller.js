@@ -66,3 +66,15 @@ export const updateInvoice = async (req, res, next) => {
     next(error);
   }
 };
+
+export const deleteInvoice = async (req, res, next) => {
+  try {
+    const isSuperAdmin = req.user.role?.name === 'SUPER_ADMIN';
+    const tenantIdToFilter = isSuperAdmin ? null : (req.user.tenantId || 1);
+
+    const deletedInvoice = await invoiceService.deleteInvoice(Number(req.params.id), tenantIdToFilter, req.user.id);
+    sendResponse(res, 200, 'Invoice deleted successfully', deletedInvoice);
+  } catch (error) {
+    next(error);
+  }
+};
