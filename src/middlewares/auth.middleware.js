@@ -120,7 +120,7 @@ export const checkPermission = (routeIdentifier, action) => {
         return next();
       }
 
-      if (isCustomer && ['CREATE', 'UPDATE', 'DELETE', 'ADJUST', 'TRANSFER', 'APPROVE'].includes(action) && ['ORDERS', 'SUPPORT', 'CONCIERGE', 'DELIVERIES', 'ITEMS', 'STOCK', 'PURCHASE_REQUESTS', 'USERS', 'CLIENTS', 'PROJECTS'].includes(routeIdentifier)) {
+      if (isCustomer && ['CREATE', 'UPDATE', 'DELETE', 'ADJUST', 'TRANSFER', 'APPROVE'].includes(action) && ['ORDERS', 'SUPPORT', 'CONCIERGE', 'DELIVERIES', 'ITEMS', 'STOCK', 'PURCHASE_REQUESTS', 'USERS', 'CLIENTS', 'PROJECTS', 'WAREHOUSES'].includes(routeIdentifier)) {
         console.log(`[RBAC] Role: ${roleName} | Route: ${routeIdentifier} | Action: ${action} | Result: ALLOWED (Customer Action Bypass)`);
         return next();
       }
