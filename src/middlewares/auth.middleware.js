@@ -115,7 +115,7 @@ export const checkPermission = (routeIdentifier, action) => {
       const roleNameLower = roleName.toLowerCase();
       console.log(`[RBAC] DEBUG: Role=${roleName}, Route=${routeIdentifier}, Action=${action}`);
       const isCustomer = ['business_client', 'business client', 'individual_client', 'individual client', 'unknown', 'guest', 'client', 'saas_client', 'saas client', 'customer'].includes(roleNameLower);
-      if (isCustomer && action === 'READ' && ['ORDERS', 'CLIENTS', 'USERS', 'VENDORS', 'DELIVERIES', 'WAREHOUSES', 'INVOICES', 'PURCHASE_REQUESTS', 'QUOTATIONS', 'RFQS', 'PURCHASE_ORDERS', 'ITEMS', 'PLANS', 'TRACKING', 'MISSIONS', 'ROUTES', 'URGENT', 'SUPPORT', 'CONCIERGE', 'ROLES', 'PROJECTS'].includes(routeIdentifier)) {
+      if (isCustomer && action === 'READ' && ['ORDERS', 'CLIENTS', 'USERS', 'VENDORS', 'DELIVERIES', 'WAREHOUSES', 'INVOICES', 'PURCHASE_REQUESTS', 'QUOTATIONS', 'RFQS', 'PURCHASE_ORDERS', 'ITEMS', 'STOCK', 'PLANS', 'TRACKING', 'MISSIONS', 'ROUTES', 'URGENT', 'SUPPORT', 'CONCIERGE', 'ROLES', 'PROJECTS'].includes(routeIdentifier)) {
         console.log(`[RBAC] Role: ${roleName} | Route: ${routeIdentifier} | Action: READ | Result: ALLOWED (Customer Bypass)`);
         return next();
       }
