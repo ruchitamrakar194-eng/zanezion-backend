@@ -5,7 +5,8 @@ import prisma from '../config/db.js';
 export const createWarehouse = async (req, res, next) => {
   try {
     const isSuperAdmin = req.user.role?.name === 'SUPER_ADMIN';
-    const tenantIdToUse = isSuperAdmin ? (req.body.tenantId || req.user.tenantId || 1) : (req.user.tenantId || 1);
+    const isBusinessClient = req.user.role?.name === 'BUSINESS_CLIENT';
+    const tenantIdToUse = isSuperAdmin ? (req.body.tenantId || req.user.tenantId || 1) : isBusinessClient ? 1 : (req.user.tenantId || 1);
 
     const payload = req.body;
 
@@ -43,7 +44,8 @@ export const getWarehouses = async (req, res, next) => {
 export const getWarehouseById = async (req, res, next) => {
   try {
     const isSuperAdmin = req.user.role?.name === 'SUPER_ADMIN';
-    const tenantIdToFilter = isSuperAdmin ? null : (req.user.tenantId || 1);
+    const isBusinessClient = req.user.role?.name === 'BUSINESS_CLIENT';
+    const tenantIdToFilter = isSuperAdmin ? null : isBusinessClient ? 1 : (req.user.tenantId || 1);
 
     const warehouse = await warehouseService.getWarehouseById(Number(req.params.id), tenantIdToFilter);
     sendResponse(res, 200, 'Warehouse fetched successfully', warehouse);
@@ -55,7 +57,8 @@ export const getWarehouseById = async (req, res, next) => {
 export const updateWarehouse = async (req, res, next) => {
   try {
     const isSuperAdmin = req.user.role?.name === 'SUPER_ADMIN';
-    const tenantIdToFilter = isSuperAdmin ? null : (req.user.tenantId || 1);
+    const isBusinessClient = req.user.role?.name === 'BUSINESS_CLIENT';
+    const tenantIdToFilter = isSuperAdmin ? null : isBusinessClient ? 1 : (req.user.tenantId || 1);
 
     const payload = req.body;
 
@@ -81,7 +84,8 @@ export const updateWarehouse = async (req, res, next) => {
 export const deleteWarehouse = async (req, res, next) => {
   try {
     const isSuperAdmin = req.user.role?.name === 'SUPER_ADMIN';
-    const tenantIdToFilter = isSuperAdmin ? null : (req.user.tenantId || 1);
+    const isBusinessClient = req.user.role?.name === 'BUSINESS_CLIENT';
+    const tenantIdToFilter = isSuperAdmin ? null : isBusinessClient ? 1 : (req.user.tenantId || 1);
 
     await warehouseService.deleteWarehouse(Number(req.params.id), tenantIdToFilter, req.user.id);
     sendResponse(res, 200, 'Warehouse deleted successfully');
