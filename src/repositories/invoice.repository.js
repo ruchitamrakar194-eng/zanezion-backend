@@ -124,3 +124,11 @@ export const checkPODExists = async (deliveryId) => {
     where: { deliveryId }
   });
 };
+
+export const deleteInvoice = async (id) => {
+  return await prisma.$transaction(async (tx) => {
+    await tx.payment.deleteMany({ where: { invoiceId: id } });
+    await tx.invoiceItem.deleteMany({ where: { invoiceId: id } });
+    return await tx.invoice.delete({ where: { id } });
+  });
+};

@@ -279,3 +279,18 @@ export const updateInvoice = async (id, data, tenantId, performerId) => {
 
   return result;
 };
+
+export const deleteInvoice = async (id, tenantId, performerId) => {
+  const invoice = await getInvoiceById(id, tenantId);
+  await invoiceRepo.deleteInvoice(invoice.id);
+
+  await logAudit({
+    module: 'INVOICES',
+    action: 'DELETE',
+    description: `Deleted Invoice ${invoice.invoiceNumber}`,
+    oldValue: invoice,
+    performedBy: performerId
+  });
+
+  return invoice;
+};
