@@ -25,7 +25,9 @@ export const getDashboardStats = async (req, res, next) => {
       fleetAvailable,
       activeProjects,
       invoices,
-      stockItems
+      stockItems,
+      openTickets,
+      activeEvents
     ] = await Promise.all([
       prisma.client.count({ where: { ...filter, status: 'active' } }),
       prisma.order.count({ where: { ...filter } }),
@@ -36,12 +38,16 @@ export const getDashboardStats = async (req, res, next) => {
       prisma.employee.count({ where: { ...filter, vehicleType: { not: null }, status: 'active' } }),
       prisma.order.count({ where: { ...filter, orderType: 'Project', status: { in: ['active', 'planned', 'in_progress', 'Pending', 'In Progress'] } } }),
       prisma.invoice.findMany({ where: filter, select: { totalAmount: true, status: true, invoiceDate: true, createdAt: true } }),
-      prisma.item.findMany({ where: filter, select: { reorderLevel: true, inventoryStock: { select: { quantity: true } } } })
+      prisma.item.findMany({ where: filter, select: { reorderLevel: true, price: true, inventoryStock: { select: { quantity: true } } } }),
+      prisma.supportTicket.count({ where: { ...filter, status: { notIn: ['Closed', 'Resolved', 'closed', 'resolved'] } } }),
+      prisma.event.count({ where: { ...filter, status: { notIn: ['Completed', 'Cancelled', 'completed', 'cancelled'] } } })
     ]);
 
-    // Aggregate stock warnings
+    // Aggregate stock warnings and inventory value
+    let inventoryValue = 0;
     const stockWarnings = stockItems.filter(item => {
       const totalStock = item.inventoryStock.reduce((sum, stock) => sum + (stock.quantity || 0), 0);
+      inventoryValue += totalStock * (item.price || 0);
       return totalStock <= (item.reorderLevel || 0);
     }).length;
 
@@ -74,12 +80,14 @@ export const getDashboardStats = async (req, res, next) => {
       fleetAvailable,
       activeProjects,
       stockWarnings,
+      inventoryValue,
+      openTickets,
+      activeEvents,
       unpaidInvoices,
       totalRevenue,
       relevantRevenue,
       prevRevenue,
-      revenueTrend,
-      activeEvents: 0
+      revenueTrend
     });
   } catch (error) {
     next(error);
