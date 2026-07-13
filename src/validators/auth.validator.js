@@ -40,7 +40,7 @@ export const updateProfileSchema = z.object({
     name: z.string().min(2).optional(),
     fullName: z.string().min(2).optional(),
     phone: z.string().optional(),
-    avatar: z.string().optional(),
+    avatar: z.string().nullable().optional(),
     password: z.string().min(6).optional().or(z.literal('')),
     birthday: z.string().nullable().optional(),
     nibNumber: z.string().nullable().optional(),
@@ -49,7 +49,7 @@ export const updateProfileSchema = z.object({
       account: z.string().nullable().optional(),
       routing: z.string().nullable().optional(),
       method: z.string().nullable().optional(),
-    }).optional(),
+    }).nullable().optional(),
   }),
 });
 
