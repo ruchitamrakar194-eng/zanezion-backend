@@ -43,8 +43,19 @@ export const createDelivery = async (data, performerId, tenantId) => {
     // Auto-create an ad-hoc order to support "Deploy New Mission" standalone flow
     let clientIdToUse = data.clientId;
     if (!clientIdToUse) {
-      const defaultClient = await prisma.client.findFirst({ where: { ...(tenantId != null && { tenantId }) } });
-      if (!defaultClient) throw new AppError('No clients available to assign to ad-hoc mission', 400);
+      // 1. Try to find a client record by tenantId
+      let defaultClient = await prisma.client.findFirst({ where: { ...(tenantId != null && { tenantId }) } });
+
+      // 2. If not found by tenantId, try by the performer user's email (SaaS Client may
+      //    be registered as a Client record with their own email)
+      if (!defaultClient && performerId) {
+        const performerUser = await prisma.user.findUnique({ where: { id: performerId }, select: { email: true } });
+        if (performerUser?.email) {
+          defaultClient = await prisma.client.findFirst({ where: { email: performerUser.email } });
+        }
+      }
+
+      if (!defaultClient) throw new AppError('No clients available to assign to ad-hoc mission. Please assign a client to this tenant first.', 400);
       clientIdToUse = defaultClient.id;
     }
 
