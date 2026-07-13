@@ -32,7 +32,7 @@ export const findAllWarehouses = async (tenantId, query) => {
       take: Number(limit),
       orderBy: { createdAt: 'desc' },
       include: {
-        manager: { select: { id: true, firstName: true, lastName: true, userId: true } },
+        manager: { select: { id: true, firstName: true, lastName: true, userId: true, user: { select: { id: true, name: true } } } },
         _count: { select: { inventoryStock: true } }
       }
     }),

@@ -15,16 +15,8 @@ export const createWarehouse = async (req, res, next) => {
       location: payload.location || null,
       capacity: payload.capacity !== undefined ? Number(payload.capacity) : 0,
       status: payload.status || 'active',
-      managerId: null,
+      managerId: payload.managerId || payload.manager_id || null,
     };
-
-    const providedManagerUserId = payload.managerId || payload.manager_id || null;
-    if (providedManagerUserId) {
-      const employee = await prisma.employee.findUnique({ where: { userId: Number(providedManagerUserId) } });
-      if (employee) {
-        warehouseData.managerId = employee.id;
-      }
-    }
 
     const warehouse = await warehouseService.createWarehouse(warehouseData, req.user.id, tenantIdToUse);
     sendResponse(res, 201, 'Warehouse created successfully', warehouse);
@@ -73,12 +65,7 @@ export const updateWarehouse = async (req, res, next) => {
     
     const providedManagerUserId = payload.managerId ?? payload.manager_id ?? undefined;
     if (providedManagerUserId !== undefined) {
-      if (providedManagerUserId) {
-        const employee = await prisma.employee.findUnique({ where: { userId: Number(providedManagerUserId) } });
-        warehouseData.managerId = employee ? employee.id : null;
-      } else {
-        warehouseData.managerId = null;
-      }
+      warehouseData.managerId = providedManagerUserId ? Number(providedManagerUserId) : null;
     }
 
     const updatedWarehouse = await warehouseService.updateWarehouse(Number(req.params.id), warehouseData, tenantIdToFilter, req.user.id);
