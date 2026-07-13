@@ -11,5 +11,7 @@ const invoiceItemSchema = z.object({
 export const generateInvoiceSchema = z.object({
   deliveryId: z.number().int().positive('Delivery ID is required'),
   dueDate: z.string().datetime('Due Date must be a valid ISO datetime'),
-  items: z.array(invoiceItemSchema).min(1, 'At least one item is required')
+  items: z.array(invoiceItemSchema).min(1, 'At least one item is required'),
+  clientId: z.number().int().optional(),
+  paidAmount: z.number().nonnegative().optional()
 });
