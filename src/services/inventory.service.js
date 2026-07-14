@@ -5,10 +5,10 @@ import * as warehouseRepo from '../repositories/warehouse.repository.js';
 import * as itemRepo from '../repositories/item.repository.js';
 import { logAudit } from '../utils/audit.js';
 
-export const issueStock = async (data, performerId, tenantId) => {
+export const issueStock = async (data, performerId, tenantId, isBusinessClient = false) => {
   const { warehouseId, itemId, quantity, issuedBy, issuedTo, clientId, remarks } = data;
 
-  const isB2BClient = tenantId === 2;
+  const isB2BClient = isBusinessClient || tenantId === 2;
   const masterTenantId = isB2BClient ? 1 : tenantId;
 
   const warehouse = await warehouseRepo.findWarehouseById(warehouseId);
@@ -55,10 +55,10 @@ export const issueStock = async (data, performerId, tenantId) => {
   return result;
 };
 
-export const recordLoss = async (data, performerId, tenantId) => {
+export const recordLoss = async (data, performerId, tenantId, isBusinessClient = false) => {
   const { warehouseId, itemId, quantity, lossType, explanation, reportedBy, investigationStatus, evidenceUrl } = data;
 
-  const isB2BClient = tenantId === 2;
+  const isB2BClient = isBusinessClient || tenantId === 2;
   const masterTenantId = isB2BClient ? 1 : tenantId;
 
   const warehouse = await warehouseRepo.findWarehouseById(warehouseId);
