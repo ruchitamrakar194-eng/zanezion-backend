@@ -26,7 +26,17 @@ export const createPurchaseRequest = async (data, performerId, tenantId) => {
       department = tenantDepts[0];
       finalDepartmentId = department.id;
     } else {
-      throw new AppError('Department not found', 404);
+      // Auto-create a default department for this tenant so requests never fail
+      console.log(`[PR] No departments found for tenant ${tenantId}. Auto-creating default "Operations" department.`);
+      department = await prisma.department.create({
+        data: {
+          name: 'Operations',
+          code: `OPS-${tenantId}`,
+          status: 'active',
+          tenantId: tenantId
+        }
+      });
+      finalDepartmentId = department.id;
     }
   }
 
