@@ -82,7 +82,7 @@ export const getPurchaseRequestById = async (id, tenantId) => {
 export const updatePurchaseRequest = async (id, data, tenantId, performerId) => {
   const pr = await getPurchaseRequestById(id, tenantId);
 
-  const unupdatableStatuses = ['completed', 'cancelled', 'ordered'];
+  const unupdatableStatuses = ['completed', 'cancelled'];
   if (unupdatableStatuses.includes(String(pr.status).toLowerCase())) {
     throw new AppError(`Cannot update PR in ${pr.status} status`, 400);
   }
