@@ -75,7 +75,7 @@ export const createDelivery = async (data, performerId, tenantId) => {
       if (!firstCat) firstCat = await prisma.itemCategory.create({ data: { tenant: { connect: { id: tenantId || 1 } }, name: 'General', description: 'General Category' } });
 
       let firstUnit = await prisma.itemUnit.findFirst({ where: { tenantId: tenantId || 1 } });
-      if (!firstUnit) firstUnit = await prisma.itemUnit.create({ data: { tenant: { connect: { id: tenantId || 1 } }, name: 'Pieces', abbreviation: 'pcs' } });
+      if (!firstUnit) firstUnit = await prisma.itemUnit.create({ data: { tenant: { connect: { id: tenantId || 1 } }, name: 'Pieces', shortName: 'pcs' } });
 
       defaultItem = await prisma.item.create({
         data: {
@@ -145,12 +145,14 @@ export const createDelivery = async (data, performerId, tenantId) => {
   }
 
   if (!warehouseId) {
-    // Find the first available warehouse for this tenant
-    const firstWarehouse = await prisma.warehouse.findFirst({
+    let firstWarehouse = await prisma.warehouse.findFirst({
       where: {
         ...(tenantId != null && { tenantId })
       }
     });
+    if (!firstWarehouse && tenantId !== 1) {
+      firstWarehouse = await prisma.warehouse.findFirst({ where: { tenantId: 1 } });
+    }
     if (firstWarehouse) {
       warehouseId = firstWarehouse.id;
     }
@@ -165,7 +167,7 @@ export const createDelivery = async (data, performerId, tenantId) => {
   deliveryData.warehouseId = warehouseId;
 
   const warehouse = await warehouseRepo.findWarehouseById(warehouseId);
-  if (!warehouse || (tenantId !== null && warehouse.tenantId !== tenantId)) {
+  if (!warehouse || (tenantId !== null && warehouse.tenantId !== tenantId && warehouse.tenantId !== 1)) {
     throw new AppError('Warehouse not found', 404);
   }
 
