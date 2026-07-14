@@ -65,7 +65,8 @@ export const provisionSaaSRequest = async (req, res, next) => {
     const tenant = await prisma.tenant.create({
       data: {
         organizationId: org.id,
-        tenantCode: `T-${Date.now().toString().slice(-6)}`
+        tenantCode: `T-${Date.now().toString().slice(-6)}`,
+        status: 'active'
       }
     });
 
