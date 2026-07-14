@@ -61,7 +61,10 @@ export const createDelivery = async (data, performerId, tenantId) => {
 
     let adHocWarehouseId = data.warehouseId;
     if (!adHocWarehouseId) {
-      const firstWarehouse = await prisma.warehouse.findFirst({ where: { ...(tenantId != null && { tenantId }) } });
+      let firstWarehouse = await prisma.warehouse.findFirst({ where: { ...(tenantId != null && { tenantId }) } });
+      if (!firstWarehouse && tenantId !== 1) {
+        firstWarehouse = await prisma.warehouse.findFirst({ where: { tenantId: 1 } });
+      }
       if (firstWarehouse) adHocWarehouseId = firstWarehouse.id;
     }
     if (!adHocWarehouseId) throw new AppError('No warehouse available for ad-hoc mission', 400);
