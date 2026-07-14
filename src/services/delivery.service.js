@@ -74,14 +74,11 @@ export const createDelivery = async (data, performerId, tenantId) => {
       defaultItem = await prisma.item.create({
         data: {
           tenant: { connect: { id: tenantId || 1 } },
-          itemCode: 'MISC-001',
           name: 'Miscellaneous Asset',
-          category: 'General',
-          type: 'product',
-          unit: 'pcs',
-          unitPrice: 0,
-          inventoryStatus: 'in_stock',
-          sku: 'MISC-001'
+          sku: 'MISC-001',
+          price: 0,
+          inventoryType: 'product',
+          status: 'in_stock'
         }
       });
     }
