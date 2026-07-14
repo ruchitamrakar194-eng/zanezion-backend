@@ -1,14 +1,13 @@
-import { PrismaClient } from '@prisma/client';
-const prisma = new PrismaClient();
-async function main() {
+import prisma from '../src/config/db.js';
+
+async function test() {
   const users = await prisma.user.findMany({
-    where: {
-      role: {
-        name: { in: ['BUSINESS_CLIENT', 'CLIENT'] }
-      }
-    },
     include: { role: true }
   });
-  console.log(users.map(u => ({ id: u.id, name: u.name, email: u.email, role: u.role.name, tenantId: u.tenantId })));
+  console.log("=== USERS IN SYSTEM ===");
+  users.forEach(u => {
+    console.log(`ID: ${u.id} | Name: ${u.name} | Email: ${u.email} | TenantId: ${u.tenantId} | Role: ${u.role?.name}`);
+  });
 }
-main().catch(console.error).finally(() => prisma.$disconnect());
+
+test().catch(console.error).finally(() => prisma.$disconnect());

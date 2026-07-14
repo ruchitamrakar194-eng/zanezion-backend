@@ -10,7 +10,11 @@ export const createOrder = async (req, res, next) => {
     let incomingCompanyId = req.body.companyId ?? req.body.company_id;
 
     const isSuperAdmin = req.user.role?.name === 'SUPER_ADMIN';
-    const tenantIdToUse = isSuperAdmin ? (req.body.tenantId || req.user.tenantId || 1) : (req.user.tenantId || 1);
+    const isBusinessClient = req.user.role?.name === 'BUSINESS_CLIENT' || req.user.role?.name === 'CLIENT';
+    const isChauffeurOrder = req.body.orderType === 'CHAUFFEUR';
+    const tenantIdToUse = isChauffeurOrder && isBusinessClient ? 1 :
+                          isSuperAdmin ? (req.body.tenantId || req.user.tenantId || 1) :
+                          (req.user.tenantId || 1);
 
     // Try to parse clientId from payload
     let parsedClientId = incomingClientId && incomingClientId !== "" ? Number(incomingClientId) : null;
@@ -92,7 +96,11 @@ export const createOrder = async (req, res, next) => {
 export const getOrders = async (req, res, next) => {
   try {
     const isSuperAdmin = req.user.role?.name === 'SUPER_ADMIN';
-    const tenantIdToFilter = isSuperAdmin && !req.query.tenantId ? null : (req.query.tenantId ? Number(req.query.tenantId) : req.user.tenantId);
+    const isBusinessClient = req.user.role?.name === 'BUSINESS_CLIENT' || req.user.role?.name === 'CLIENT';
+    const isChauffeurQuery = req.query.orderType === 'CHAUFFEUR';
+    const tenantIdToFilter = isChauffeurQuery && isBusinessClient ? 1 :
+                             isSuperAdmin && !req.query.tenantId ? null :
+                             (req.query.tenantId ? Number(req.query.tenantId) : req.user.tenantId);
 
     if (['INDIVIDUAL_CLIENT', 'CUSTOMER'].includes(req.user.role?.name?.toUpperCase())) {
       req.query.clientId = req.user.clientId;
@@ -108,7 +116,13 @@ export const getOrders = async (req, res, next) => {
 export const getOrderById = async (req, res, next) => {
   try {
     const isSuperAdmin = req.user.role?.name === 'SUPER_ADMIN';
-    const tenantIdToFilter = isSuperAdmin ? null : (req.user.tenantId || 1);
+    const isBusinessClient = req.user.role?.name === 'BUSINESS_CLIENT' || req.user.role?.name === 'CLIENT';
+
+    const orderCheck = await prisma.order.findUnique({ where: { id: Number(req.params.id) } });
+    const isChauffeur = orderCheck?.orderType === 'CHAUFFEUR';
+
+    const tenantIdToFilter = isChauffeur && isBusinessClient ? 1 :
+                             isSuperAdmin ? null : (req.user.tenantId || 1);
 
     const order = await orderService.getOrderById(Number(req.params.id), tenantIdToFilter);
     sendResponse(res, 200, 'Order fetched successfully', order);
@@ -120,8 +134,14 @@ export const getOrderById = async (req, res, next) => {
 export const updateOrderStatus = async (req, res, next) => {
   try {
     const isSuperAdmin = req.user.role?.name === 'SUPER_ADMIN';
-    const tenantIdToFilter = isSuperAdmin ? null : (req.user.tenantId || 1);
+    const isBusinessClient = req.user.role?.name === 'BUSINESS_CLIENT' || req.user.role?.name === 'CLIENT';
     const { status } = req.body;
+
+    const orderCheck = await prisma.order.findUnique({ where: { id: Number(req.params.id) } });
+    const isChauffeur = orderCheck?.orderType === 'CHAUFFEUR';
+
+    const tenantIdToFilter = isChauffeur && isBusinessClient ? 1 :
+                             isSuperAdmin ? null : (req.user.tenantId || 1);
 
     const updatedOrder = await orderService.updateOrderStatus(Number(req.params.id), status, tenantIdToFilter, req.user.id);
     sendResponse(res, 200, 'Order status updated successfully', updatedOrder);
@@ -133,7 +153,13 @@ export const updateOrderStatus = async (req, res, next) => {
 export const updateOrder = async (req, res, next) => {
   try {
     const isSuperAdmin = req.user.role?.name === 'SUPER_ADMIN';
-    const tenantIdToFilter = isSuperAdmin ? null : (req.user.tenantId || 1);
+    const isBusinessClient = req.user.role?.name === 'BUSINESS_CLIENT' || req.user.role?.name === 'CLIENT';
+
+    const orderCheck = await prisma.order.findUnique({ where: { id: Number(req.params.id) } });
+    const isChauffeur = orderCheck?.orderType === 'CHAUFFEUR';
+
+    const tenantIdToFilter = isChauffeur && isBusinessClient ? 1 :
+                             isSuperAdmin ? null : (req.user.tenantId || 1);
 
     const updatedOrder = await orderService.updateOrder(Number(req.params.id), req.body, tenantIdToFilter, req.user.id);
     sendResponse(res, 200, 'Order updated successfully', updatedOrder);
@@ -145,7 +171,13 @@ export const updateOrder = async (req, res, next) => {
 export const deleteOrder = async (req, res, next) => {
   try {
     const isSuperAdmin = req.user.role?.name === 'SUPER_ADMIN';
-    const tenantIdToFilter = isSuperAdmin ? null : (req.user.tenantId || 1);
+    const isBusinessClient = req.user.role?.name === 'BUSINESS_CLIENT' || req.user.role?.name === 'CLIENT';
+
+    const orderCheck = await prisma.order.findUnique({ where: { id: Number(req.params.id) } });
+    const isChauffeur = orderCheck?.orderType === 'CHAUFFEUR';
+
+    const tenantIdToFilter = isChauffeur && isBusinessClient ? 1 :
+                             isSuperAdmin ? null : (req.user.tenantId || 1);
 
     await orderService.deleteOrder(Number(req.params.id), tenantIdToFilter, req.user.id);
     sendResponse(res, 200, 'Order deleted successfully');

@@ -6,7 +6,7 @@ export const createUser = async (req, res, next) => {
   try {
     const data = req.body;
     // ensure tenant isolation
-    data.tenantId = req.user.tenantId || data.tenantId || 1; 
+    data.tenantId = req.user.tenantId || data.tenantId || 1;
 
     // robust payload prep for prisma
     const payload = {
@@ -29,9 +29,9 @@ export const createUser = async (req, res, next) => {
     };
 
     const user = await userService.createUser(
-      payload, 
-      req.user.id, 
-      req.ip, 
+      payload,
+      req.user.id,
+      req.ip,
       req.headers['user-agent']
     );
 
@@ -62,13 +62,13 @@ export const getCustomers = async (req, res, next) => {
     if (!req.query.include_all && !req.query.include_client_role) {
       query.roleName = 'BUSINESS_CLIENT';
     }
-    
+
     if (['BUSINESS_CLIENT', 'INDIVIDUAL_CLIENT'].includes(req.user.role?.name)) {
       query.clientId = req.user.clientId;
     }
 
     const result = await userService.getUsers(tenantIdToFilter, query);
-    
+
     sendResponse(res, 200, 'Customers fetched successfully', result);
   } catch (error) {
     next(error);
@@ -100,7 +100,7 @@ export const updateUser = async (req, res, next) => {
 
     const data = req.body;
     const payload = {};
-    
+
     // Only admins can update these fields
     if (!isCustomer) {
       if (data.roleId !== undefined && data.roleId) payload.roleId = Number(data.roleId);
@@ -211,5 +211,7 @@ export const uploadDocument = async (req, res, next) => {
     sendResponse(res, 200, 'Document uploaded successfully', updatedUser);
   } catch (error) {
     next(error);
+  }
+};
   }
 };
