@@ -44,7 +44,13 @@ export const createUser = async (req, res, next) => {
 export const getUsers = async (req, res, next) => {
   try {
     const isSuperAdmin = req.user.role?.name === 'SUPER_ADMIN';
-    const tenantIdToFilter = isSuperAdmin ? null : (req.user.tenantId || 1);
+    const isClient = ['BUSINESS_CLIENT', 'INDIVIDUAL_CLIENT'].includes(req.user.role?.name);
+    
+    let tenantIdToFilter = isSuperAdmin ? null : (req.user.tenantId || 1);
+
+    if (isClient) {
+      tenantIdToFilter = 1;
+    }
 
     const result = await userService.getUsers(tenantIdToFilter, req.query);
     sendResponse(res, 200, 'Users fetched successfully', result);
