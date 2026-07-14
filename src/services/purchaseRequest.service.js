@@ -82,10 +82,11 @@ export const getPurchaseRequestById = async (id, tenantId) => {
 export const updatePurchaseRequest = async (id, data, tenantId, performerId) => {
   const pr = await getPurchaseRequestById(id, tenantId);
 
-  const unupdatableStatuses = ['completed', 'cancelled', 'ordered'];
-  if (unupdatableStatuses.includes(String(pr.status).toLowerCase())) {
-    throw new AppError(`Cannot update PR in ${pr.status} status`, 400);
-  }
+  // Relaxing status locks so admins/clients can correct mistakes
+  // const unupdatableStatuses = ['completed', 'cancelled'];
+  // if (unupdatableStatuses.includes(String(pr.status).toLowerCase())) {
+  //   throw new AppError(`Cannot update PR in ${pr.status} status`, 400);
+  // }
 
   const safePrData = {};
   if (data.title) safePrData.title = data.title;
@@ -136,9 +137,9 @@ export const updatePurchaseRequestStatus = async (id, status, tenantId, performe
     'approved': ['rfq_created', 'ordered', 'pending'],
     'rfq_created': ['ordered', 'pending'],
     'ordered': ['completed', 'pending'],
-    'completed': [],
+    'completed': ['pending', 'ordered', 'draft'],
     'rejected': ['pending'],
-    'cancelled': []
+    'cancelled': ['draft', 'pending']
   };
 
   const currentStatusClean = String(pr.status || 'draft').toLowerCase();

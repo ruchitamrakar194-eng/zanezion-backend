@@ -95,7 +95,10 @@ export const createOrder = async (data, performerId, tenantId) => {
   }
 
   // Ensure strict tenant isolation using Number casting to prevent type mismatch (string vs int)
-  if (tenantId !== null && Number(client.tenantId) !== Number(tenantId)) {
+  console.log(`[Order Creation Debug] orderData:`, JSON.stringify(orderData));
+  const isChauffeur = orderData.orderType === 'CHAUFFEUR';
+  console.log(`[Order Creation Debug] isChauffeur: ${isChauffeur}`);
+  if (!isChauffeur && tenantId !== null && Number(client.tenantId) !== Number(tenantId)) {
     console.error(`[Order Creation] Tenant mismatch! Client belongs to ${client.tenantId}, request from ${tenantId}`);
     throw new AppError('Selected client does not exist', 404);
   }

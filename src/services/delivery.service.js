@@ -61,23 +61,32 @@ export const createDelivery = async (data, performerId, tenantId) => {
 
     let adHocWarehouseId = data.warehouseId;
     if (!adHocWarehouseId) {
-      const firstWarehouse = await prisma.warehouse.findFirst({ where: { ...(tenantId != null && { tenantId }) } });
+      let firstWarehouse = await prisma.warehouse.findFirst({ where: { ...(tenantId != null && { tenantId }) } });
+      if (!firstWarehouse && tenantId !== 1) {
+        firstWarehouse = await prisma.warehouse.findFirst({ where: { tenantId: 1 } });
+      }
       if (firstWarehouse) adHocWarehouseId = firstWarehouse.id;
     }
     if (!adHocWarehouseId) throw new AppError('No warehouse available for ad-hoc mission', 400);
 
     let defaultItem = await prisma.item.findFirst({ where: { ...(tenantId != null && { tenantId }) } });
     if (!defaultItem) {
+      let firstCat = await prisma.itemCategory.findFirst({ where: { tenantId: tenantId || 1 } });
+      if (!firstCat) firstCat = await prisma.itemCategory.create({ data: { tenant: { connect: { id: tenantId || 1 } }, name: 'General', description: 'General Category' } });
+
+      let firstUnit = await prisma.itemUnit.findFirst({ where: { tenantId: tenantId || 1 } });
+      if (!firstUnit) firstUnit = await prisma.itemUnit.create({ data: { tenant: { connect: { id: tenantId || 1 } }, name: 'Pieces', abbreviation: 'pcs' } });
+
       defaultItem = await prisma.item.create({
         data: {
-          tenantId: tenantId || 1,
-          itemCode: 'MISC-001',
+          tenant: { connect: { id: tenantId || 1 } },
+          category: { connect: { id: firstCat.id } },
+          unit: { connect: { id: firstUnit.id } },
           name: 'Miscellaneous Asset',
-          category: 'General',
-          type: 'product',
-          unit: 'pcs',
-          unitPrice: 0,
-          inventoryStatus: 'in_stock'
+          sku: 'MISC-001',
+          price: 0,
+          inventoryType: 'INTERNAL',
+          status: 'active'
         }
       });
     }

@@ -17,7 +17,7 @@ export const createItem = async (req, res, next) => {
 export const getItems = async (req, res, next) => {
   try {
     const isSuperAdmin = req.user.role?.name === 'SUPER_ADMIN';
-    const isBusinessClient = req.user.role?.name === 'BUSINESS_CLIENT';
+    const isBusinessClient = req.user.role?.name === 'BUSINESS_CLIENT' || req.user.role?.name === 'CLIENT';
     const tenantIdToFilter = isSuperAdmin && !req.query.tenantId ? null :
                              isBusinessClient ? 1 :
                              (req.query.tenantId ? Number(req.query.tenantId) : req.user.tenantId);

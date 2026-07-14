@@ -10,7 +10,7 @@ export const createUser = async (data, performerId, ipAddress, userAgent) => {
   }
 
   const hashedPassword = await bcrypt.hash(data.password, 10);
-  
+
   const newUser = await userRepository.createUser({
     ...data,
     password: hashedPassword

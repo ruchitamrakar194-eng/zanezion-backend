@@ -5,9 +5,10 @@ import prisma from '../config/db.js';
 export const issueStock = async (req, res, next) => {
   try {
     const isSuperAdmin = req.user.role?.name === 'SUPER_ADMIN';
+    const isBusinessClient = req.user.role?.name === 'BUSINESS_CLIENT' || req.user.role?.name === 'CLIENT';
     const tenantIdToUse = isSuperAdmin ? (req.body.tenantId || req.user.tenantId || 1) : (req.user.tenantId || 1);
 
-    const result = await inventoryService.issueStock(req.body, req.user.id, tenantIdToUse);
+    const result = await inventoryService.issueStock(req.body, req.user.id, tenantIdToUse, isBusinessClient);
     sendResponse(res, 200, 'Stock issued successfully', result);
   } catch (error) {
     next(error);
@@ -17,9 +18,10 @@ export const issueStock = async (req, res, next) => {
 export const recordLoss = async (req, res, next) => {
   try {
     const isSuperAdmin = req.user.role?.name === 'SUPER_ADMIN';
+    const isBusinessClient = req.user.role?.name === 'BUSINESS_CLIENT' || req.user.role?.name === 'CLIENT';
     const tenantIdToUse = isSuperAdmin ? (req.body.tenantId || req.user.tenantId || 1) : (req.user.tenantId || 1);
 
-    const result = await inventoryService.recordLoss(req.body, req.user.id, tenantIdToUse);
+    const result = await inventoryService.recordLoss(req.body, req.user.id, tenantIdToUse, isBusinessClient);
     sendResponse(res, 200, 'Strategic loss assessment recorded successfully', result);
   } catch (error) {
     next(error);
