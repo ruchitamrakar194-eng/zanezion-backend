@@ -75,7 +75,7 @@ export const createDelivery = async (data, performerId, tenantId) => {
       if (!firstCat) firstCat = await prisma.itemCategory.create({ data: { tenant: { connect: { id: tenantId || 1 } }, name: 'General', description: 'General Category' } });
 
       let firstUnit = await prisma.itemUnit.findFirst({ where: { tenantId: tenantId || 1 } });
-      if (!firstUnit) firstUnit = await prisma.itemUnit.create({ data: { tenant: { connect: { id: tenantId || 1 } }, name: 'Pieces', abbreviation: 'pcs' } });
+      if (!firstUnit) firstUnit = await prisma.itemUnit.create({ data: { tenant: { connect: { id: tenantId || 1 } }, name: 'Pieces', shortName: 'pcs' } });
 
       defaultItem = await prisma.item.create({
         data: {
