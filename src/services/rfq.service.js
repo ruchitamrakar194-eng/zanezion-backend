@@ -6,13 +6,13 @@ import { logAudit } from '../utils/audit.js';
 
 export const createRFQ = async (data, performerId, tenantId) => {
   const pr = await prRepository.findPurchaseRequestById(data.purchaseRequestId);
-  if (!pr || (tenantId !== null && pr.tenantId !== tenantId)) {
+  if (!pr || (tenantId !== null && pr.tenantId !== tenantId && pr.tenantId !== 1)) {
     throw new AppError('Purchase Request not found', 404);
   }
 
 
   const vendor = await vendorRepository.findVendorById(data.vendorId);
-  if (!vendor || (tenantId !== null && vendor.tenantId !== tenantId)) {
+  if (!vendor || (tenantId !== null && vendor.tenantId !== tenantId && vendor.tenantId !== 1)) {
     throw new AppError('Vendor not found', 404);
   }
 

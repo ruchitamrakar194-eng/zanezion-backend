@@ -9,7 +9,7 @@ export const createQuotation = async (data, performerId, tenantId) => {
   
   if (data.rfqId) {
     rfq = await rfqRepository.findRFQById(data.rfqId);
-    if (!rfq || (tenantId !== null && rfq.tenantId !== tenantId)) {
+    if (!rfq || (tenantId !== null && rfq.tenantId !== tenantId && rfq.tenantId !== 1)) {
       throw new AppError('RFQ not found', 404);
     }
     if (rfq.status === 'closed') {
@@ -28,7 +28,7 @@ export const createQuotation = async (data, performerId, tenantId) => {
 
   if (data.vendorId) {
     const vendor = await vendorRepository.findVendorById(data.vendorId);
-    if (!vendor || (tenantId !== null && vendor.tenantId !== tenantId)) {
+    if (!vendor || (tenantId !== null && vendor.tenantId !== tenantId && vendor.tenantId !== 1)) {
       throw new AppError('Vendor not found', 404);
     }
   }

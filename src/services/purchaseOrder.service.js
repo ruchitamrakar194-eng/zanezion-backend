@@ -8,7 +8,7 @@ import prisma from '../config/db.js';
 
 export const createPurchaseOrder = async (data, performerId, tenantId) => {
   const pr = await prRepository.findPurchaseRequestById(data.purchaseRequestId);
-  if (!pr || (tenantId !== null && pr.tenantId !== tenantId)) {
+  if (!pr || (tenantId !== null && pr.tenantId !== tenantId && pr.tenantId !== 1)) {
     throw new AppError('Purchase Request not found', 404);
   }
 
@@ -18,13 +18,13 @@ export const createPurchaseOrder = async (data, performerId, tenantId) => {
   }
 
   const vendor = await vendorRepository.findVendorById(data.vendorId);
-  if (!vendor || (tenantId !== null && vendor.tenantId !== tenantId)) {
+  if (!vendor || (tenantId !== null && vendor.tenantId !== tenantId && vendor.tenantId !== 1)) {
     throw new AppError('Vendor not found', 404);
   }
 
   if (data.quotationId) {
     const quotation = await quotationRepository.findQuotationById(data.quotationId);
-    if (!quotation || (tenantId !== null && quotation.tenantId !== tenantId)) {
+    if (!quotation || (tenantId !== null && quotation.tenantId !== tenantId && quotation.tenantId !== 1)) {
       throw new AppError('Quotation not found', 404);
     }
     if (quotation.status !== 'approved') {
