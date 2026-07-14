@@ -61,10 +61,10 @@ export const createOrder = async (data, performerId, tenantId) => {
     for (const item of items) {
       if (item.itemId && item.warehouseId) {
         validOrderItems.push({
-            itemId: Number(item.itemId),
-            warehouseId: Number(item.warehouseId),
-            quantity: Number(item.quantity || item.qty || 1),
-            unitPrice: Number(item.unitPrice || item.price || 0)
+          itemId: Number(item.itemId),
+          warehouseId: Number(item.warehouseId),
+          quantity: Number(item.quantity || item.qty || 1),
+          unitPrice: Number(item.unitPrice || item.price || 0)
         });
       } else {
         customItems.push(item);
@@ -80,7 +80,7 @@ export const createOrder = async (data, performerId, tenantId) => {
   }
 
   const client = await clientRepo.findClientById(data.clientId);
-  
+
   // Detailed logging as requested
   console.log(`[Order Creation] Received clientId: ${data.clientId}, tenantId: ${tenantId}`);
   console.log(`[Order Creation] Prisma query result:`, client ? `Found (ID: ${client.id}, Tenant: ${client.tenantId}, Status: ${client.status})` : 'Null');
@@ -104,7 +104,7 @@ export const createOrder = async (data, performerId, tenantId) => {
   }
 
   const employee = await prisma.employee.findUnique({ where: { userId: performerId } });
-  
+
   orderData.createdById = employee ? employee.id : 1;
   orderData.status = data.status || orderData.status || 'draft';
 
@@ -223,7 +223,7 @@ export const updateOrder = async (id, data, tenantId, performerId) => {
   }
 
   let metadataObj = typeof order.metadata === 'string' ? JSON.parse(order.metadata) : (order.metadata || {});
-  
+
   if (customItems.length > 0) {
     metadataExt.customItems = customItems;
   }
@@ -241,7 +241,7 @@ export const updateOrder = async (id, data, tenantId, performerId) => {
       metadata: finalMetadata
     }
   });
-  
+
   const { metadata, ...rest } = updatedOrder;
   return {
     ...rest,
