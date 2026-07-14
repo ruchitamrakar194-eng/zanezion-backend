@@ -15,6 +15,9 @@ export const getDashboardStats = async (req, res, next) => {
     const thresholdDate = new Date(now.getTime() - (days * 24 * 60 * 60 * 1000));
     const prevThresholdDate = new Date(thresholdDate.getTime() - (days * 24 * 60 * 60 * 1000));
 
+    const isBusinessClient = req.user?.role?.name === 'BUSINESS_CLIENT';
+    const masterFilter = (tenantId && !isBusinessClient) ? { tenantId } : { tenantId: 1 };
+
     const [
       activeClients,
       totalOrders,
@@ -25,23 +28,29 @@ export const getDashboardStats = async (req, res, next) => {
       fleetAvailable,
       activeProjects,
       invoices,
-      stockItems
+      stockItems,
+      openTickets,
+      activeEvents
     ] = await Promise.all([
-      prisma.client.count({ where: { ...filter, status: 'active' } }),
+      prisma.client.count({ where: { ...filter, status: 'active', clientType: 'Personal' } }),
       prisma.order.count({ where: { ...filter } }),
       prisma.order.count({ where: { ...filter, status: { notIn: ['completed', 'cancelled'] } } }),
       prisma.order.count({ where: { ...filter, status: 'completed' } }),
       prisma.delivery.count({ where: { ...filter, status: 'Pending' } }),
       prisma.user.count({ where: { ...filter, status: 'active' } }),
-      prisma.employee.count({ where: { ...filter, vehicleType: { not: null }, status: 'active' } }),
+      prisma.employee.count({ where: { ...masterFilter, vehicleType: { not: null }, status: 'active' } }),
       prisma.order.count({ where: { ...filter, orderType: 'Project', status: { in: ['active', 'planned', 'in_progress', 'Pending', 'In Progress'] } } }),
       prisma.invoice.findMany({ where: filter, select: { totalAmount: true, status: true, invoiceDate: true, createdAt: true } }),
-      prisma.item.findMany({ where: filter, select: { reorderLevel: true, inventoryStock: { select: { quantity: true } } } })
+      prisma.item.findMany({ where: masterFilter, select: { reorderLevel: true, price: true, inventoryStock: { select: { quantity: true } } } }),
+      prisma.supportTicket.count({ where: { ...filter, status: { notIn: ['Closed', 'Resolved', 'closed', 'resolved'] } } }),
+      prisma.event.count({ where: { ...filter, status: { notIn: ['Completed', 'Cancelled', 'completed', 'cancelled'] } } })
     ]);
 
-    // Aggregate stock warnings
+    // Aggregate stock warnings and inventory value
+    let inventoryValue = 0;
     const stockWarnings = stockItems.filter(item => {
       const totalStock = item.inventoryStock.reduce((sum, stock) => sum + (stock.quantity || 0), 0);
+      inventoryValue += totalStock * (item.price || 0);
       return totalStock <= (item.reorderLevel || 0);
     }).length;
 
@@ -74,13 +83,32 @@ export const getDashboardStats = async (req, res, next) => {
       fleetAvailable,
       activeProjects,
       stockWarnings,
+      inventoryValue,
+      openTickets,
+      activeEvents,
       unpaidInvoices,
       totalRevenue,
       relevantRevenue,
       prevRevenue,
-      revenueTrend,
-      activeEvents: 0
+      revenueTrend
     });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const getDashboardLogs = async (req, res, next) => {
+  try {
+    const tenantId = req.user?.tenantId;
+    const filter = tenantId ? { user: { tenantId } } : {};
+
+    const logs = await prisma.auditLog.findMany({
+      where: filter,
+      orderBy: { timestamp: 'desc' },
+      take: 20
+    });
+
+    sendResponse(res, 200, 'Dashboard logs retrieved successfully', logs);
   } catch (error) {
     next(error);
   }

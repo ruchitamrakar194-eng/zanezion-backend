@@ -5,7 +5,8 @@ import prisma from '../config/db.js';
 export const createWarehouse = async (req, res, next) => {
   try {
     const isSuperAdmin = req.user.role?.name === 'SUPER_ADMIN';
-    const tenantIdToUse = isSuperAdmin ? (req.body.tenantId || req.user.tenantId || 1) : (req.user.tenantId || 1);
+    const isBusinessClient = req.user.role?.name === 'BUSINESS_CLIENT';
+    const tenantIdToUse = isSuperAdmin ? (req.body.tenantId || req.user.tenantId || 1) : isBusinessClient ? 1 : (req.user.tenantId || 1);
 
     const payload = req.body;
 
@@ -15,16 +16,8 @@ export const createWarehouse = async (req, res, next) => {
       location: payload.location || null,
       capacity: payload.capacity !== undefined ? Number(payload.capacity) : 0,
       status: payload.status || 'active',
-      managerId: null,
+      managerId: payload.managerId || payload.manager_id || null,
     };
-
-    const providedManagerUserId = payload.managerId || payload.manager_id || null;
-    if (providedManagerUserId) {
-      const employee = await prisma.employee.findUnique({ where: { userId: Number(providedManagerUserId) } });
-      if (employee) {
-        warehouseData.managerId = employee.id;
-      }
-    }
 
     const warehouse = await warehouseService.createWarehouse(warehouseData, req.user.id, tenantIdToUse);
     sendResponse(res, 201, 'Warehouse created successfully', warehouse);
@@ -36,7 +29,10 @@ export const createWarehouse = async (req, res, next) => {
 export const getWarehouses = async (req, res, next) => {
   try {
     const isSuperAdmin = req.user.role?.name === 'SUPER_ADMIN';
-    const tenantIdToFilter = isSuperAdmin && !req.query.tenantId ? null : (req.query.tenantId ? Number(req.query.tenantId) : req.user.tenantId);
+    const isBusinessClient = req.user.role?.name === 'BUSINESS_CLIENT';
+    const tenantIdToFilter = isSuperAdmin && !req.query.tenantId ? null :
+                             isBusinessClient ? 1 :
+                             (req.query.tenantId ? Number(req.query.tenantId) : req.user.tenantId);
 
     const result = await warehouseService.getWarehouses(tenantIdToFilter, req.query);
     sendResponse(res, 200, 'Warehouses fetched successfully', result);
@@ -48,7 +44,8 @@ export const getWarehouses = async (req, res, next) => {
 export const getWarehouseById = async (req, res, next) => {
   try {
     const isSuperAdmin = req.user.role?.name === 'SUPER_ADMIN';
-    const tenantIdToFilter = isSuperAdmin ? null : (req.user.tenantId || 1);
+    const isBusinessClient = req.user.role?.name === 'BUSINESS_CLIENT';
+    const tenantIdToFilter = isSuperAdmin ? null : isBusinessClient ? 1 : (req.user.tenantId || 1);
 
     const warehouse = await warehouseService.getWarehouseById(Number(req.params.id), tenantIdToFilter);
     sendResponse(res, 200, 'Warehouse fetched successfully', warehouse);
@@ -60,7 +57,8 @@ export const getWarehouseById = async (req, res, next) => {
 export const updateWarehouse = async (req, res, next) => {
   try {
     const isSuperAdmin = req.user.role?.name === 'SUPER_ADMIN';
-    const tenantIdToFilter = isSuperAdmin ? null : (req.user.tenantId || 1);
+    const isBusinessClient = req.user.role?.name === 'BUSINESS_CLIENT';
+    const tenantIdToFilter = isSuperAdmin ? null : isBusinessClient ? 1 : (req.user.tenantId || 1);
 
     const payload = req.body;
 
@@ -73,12 +71,7 @@ export const updateWarehouse = async (req, res, next) => {
     
     const providedManagerUserId = payload.managerId ?? payload.manager_id ?? undefined;
     if (providedManagerUserId !== undefined) {
-      if (providedManagerUserId) {
-        const employee = await prisma.employee.findUnique({ where: { userId: Number(providedManagerUserId) } });
-        warehouseData.managerId = employee ? employee.id : null;
-      } else {
-        warehouseData.managerId = null;
-      }
+      warehouseData.managerId = providedManagerUserId ? Number(providedManagerUserId) : null;
     }
 
     const updatedWarehouse = await warehouseService.updateWarehouse(Number(req.params.id), warehouseData, tenantIdToFilter, req.user.id);
@@ -91,7 +84,8 @@ export const updateWarehouse = async (req, res, next) => {
 export const deleteWarehouse = async (req, res, next) => {
   try {
     const isSuperAdmin = req.user.role?.name === 'SUPER_ADMIN';
-    const tenantIdToFilter = isSuperAdmin ? null : (req.user.tenantId || 1);
+    const isBusinessClient = req.user.role?.name === 'BUSINESS_CLIENT';
+    const tenantIdToFilter = isSuperAdmin ? null : isBusinessClient ? 1 : (req.user.tenantId || 1);
 
     await warehouseService.deleteWarehouse(Number(req.params.id), tenantIdToFilter, req.user.id);
     sendResponse(res, 200, 'Warehouse deleted successfully');

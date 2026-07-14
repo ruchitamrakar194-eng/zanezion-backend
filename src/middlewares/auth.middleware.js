@@ -115,12 +115,12 @@ export const checkPermission = (routeIdentifier, action) => {
       const roleNameLower = roleName.toLowerCase();
       console.log(`[RBAC] DEBUG: Role=${roleName}, Route=${routeIdentifier}, Action=${action}`);
       const isCustomer = ['business_client', 'business client', 'individual_client', 'individual client', 'unknown', 'guest', 'client', 'saas_client', 'saas client', 'customer'].includes(roleNameLower);
-      if (isCustomer && action === 'READ' && ['ORDERS', 'CLIENTS', 'USERS', 'VENDORS', 'DELIVERIES', 'WAREHOUSES', 'INVOICES', 'PURCHASE_REQUESTS', 'QUOTATIONS', 'RFQS', 'PURCHASE_ORDERS', 'ITEMS', 'STOCK', 'PLANS', 'TRACKING', 'MISSIONS', 'ROUTES', 'URGENT', 'SUPPORT', 'CONCIERGE'].includes(routeIdentifier)) {
+      if (isCustomer && action === 'READ' && ['ORDERS', 'CLIENTS', 'USERS', 'VENDORS', 'DELIVERIES', 'WAREHOUSES', 'INVOICES', 'PURCHASE_REQUESTS', 'QUOTATIONS', 'RFQS', 'PURCHASE_ORDERS', 'ITEMS', 'STOCK', 'PLANS', 'TRACKING', 'MISSIONS', 'ROUTES', 'URGENT', 'SUPPORT', 'CONCIERGE', 'ROLES', 'PROJECTS'].includes(routeIdentifier)) {
         console.log(`[RBAC] Role: ${roleName} | Route: ${routeIdentifier} | Action: READ | Result: ALLOWED (Customer Bypass)`);
         return next();
       }
 
-      if (isCustomer && ['CREATE', 'UPDATE', 'DELETE', 'ADJUST', 'TRANSFER', 'APPROVE'].includes(action) && ['ORDERS', 'SUPPORT', 'CONCIERGE', 'DELIVERIES', 'ITEMS', 'STOCK', 'PURCHASE_REQUESTS', 'USERS', 'CLIENTS'].includes(routeIdentifier)) {
+      if (isCustomer && ['CREATE', 'UPDATE', 'DELETE', 'ADJUST', 'TRANSFER', 'APPROVE', 'MANAGE'].includes(action) && ['ORDERS', 'SUPPORT', 'CONCIERGE', 'DELIVERIES', 'STOCK', 'WAREHOUSES', 'PURCHASE_ORDERS', 'PURCHASE_REQUESTS', 'USERS', 'CLIENTS', 'PROJECTS', 'INVOICES', 'PAYMENTS'].includes(routeIdentifier)) {
         console.log(`[RBAC] Role: ${roleName} | Route: ${routeIdentifier} | Action: ${action} | Result: ALLOWED (Customer Action Bypass)`);
         return next();
       }
@@ -153,7 +153,7 @@ export const checkPermission = (routeIdentifier, action) => {
 
       if (!hasAccess && !isSuperAdmin) {
         // Implicit bypass for internal staff roles for core operational workflows
-        const staffRoles = ['admin', 'operations', 'procurement', 'logistics', 'inventory', 'concierge', 'staff'];
+        const staffRoles = ['admin', 'operations', 'procurement', 'logistics', 'inventory', 'concierge', 'staff', 'saas_client', 'saas client'];
         const isStaff = staffRoles.some(r => roleName.toLowerCase().includes(r));
 
         const operationalRoutes = [

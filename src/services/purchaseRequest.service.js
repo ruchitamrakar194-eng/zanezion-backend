@@ -16,15 +16,24 @@ export const createPurchaseRequest = async (data, performerId, tenantId) => {
     employeeId = await getEmployeeIdByUserId(Number(data.requester_id || data.requestedBy));
   }
 
-  const department = await departmentRepository.findDepartmentById(data.departmentId);
+  let finalDepartmentId = data.departmentId ? Number(data.departmentId) : null;
+  let department = finalDepartmentId ? await departmentRepository.findDepartmentById(finalDepartmentId) : null;
+
   if (!department || (tenantId !== null && department.tenantId !== tenantId)) {
-    throw new AppError('Department not found', 404);
+    // Graceful fallback: find the first available department for this tenant
+    const tenantDepts = await prisma.department.findMany({ where: { tenantId } });
+    if (tenantDepts.length > 0) {
+      department = tenantDepts[0];
+      finalDepartmentId = department.id;
+    } else {
+      throw new AppError('Department not found', 404);
+    }
   }
 
   const safePrData = {
     title: data.title || data.requestType || 'Purchase Request',
     description: `[userId:${performerId}] ${data.description || ''}`.trim(),
-    departmentId: data.departmentId ? Number(data.departmentId) : 1,
+    departmentId: finalDepartmentId,
     requestedBy: employeeId,
     status: 'draft',
     priority: data.priority || 'medium'

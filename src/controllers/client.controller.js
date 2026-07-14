@@ -54,9 +54,8 @@ export const createClient = async (req, res, next) => {
           status: 'Active'
         }, req.user.id, req.ip, req.headers['user-agent']);
       } else {
-        const hashedPassword = await bcrypt.hash(payload.password, 10);
         await userService.updateUser(existingUser.id, {
-          password: hashedPassword,
+          password: payload.password,
           deletedAt: null,
           status: 'Active'
         }, null, req.ip, req.headers['user-agent']);
@@ -74,7 +73,7 @@ export const getClients = async (req, res, next) => {
     const isSuperAdmin = req.user.role?.name === 'SUPER_ADMIN';
     const tenantIdToFilter = isSuperAdmin && !req.query.tenantId ? null : (req.query.tenantId ? Number(req.query.tenantId) : req.user.tenantId);
 
-    if (['BUSINESS_CLIENT', 'INDIVIDUAL_CLIENT'].includes(req.user.role?.name)) {
+    if (['INDIVIDUAL_CLIENT'].includes(req.user.role?.name)) {
       req.query.id = req.user.clientId;
     }
 
@@ -133,9 +132,8 @@ export const updateClient = async (req, res, next) => {
       const roleId = updatedClient.clientType === 'SaaS' ? 14 : 13; // Default to SAAS_CLIENT or CUSTOMER
 
       if (existingUser) {
-        const hashedPassword = await bcrypt.hash(payload.password, 10);
         await userService.updateUser(existingUser.id, {
-          password: hashedPassword,
+          password: payload.password,
           deletedAt: null,
           status: 'Active'
         }, null, req.ip, req.headers['user-agent']);

@@ -13,7 +13,12 @@ export const findAllItemCategories = async (tenantId, query) => {
   const skip = (page - 1) * limit;
 
   const where = {
-    ...(tenantId !== null && { tenantId }),
+    ...(tenantId !== null && {
+      OR: [
+        { tenantId },
+        { tenantId: 1 }
+      ]
+    }),
     ...(search && { name: { contains: search } }),
     ...(status && { status })
   };

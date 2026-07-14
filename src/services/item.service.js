@@ -8,13 +8,13 @@ import prisma from '../config/db.js';
 export const createItem = async (data, performerId, tenantId) => {
   // Check category
   const category = await categoryRepo.findItemCategoryById(data.categoryId);
-  if (!category || (tenantId !== null && category.tenantId !== tenantId)) {
+  if (!category || (tenantId !== null && category.tenantId !== tenantId && category.tenantId !== 1)) {
     throw new AppError('Category not found', 404);
   }
 
   // Check unit
   const unit = await unitRepo.findItemUnitById(data.unitId);
-  if (!unit || (tenantId !== null && unit.tenantId !== tenantId)) {
+  if (!unit || (tenantId !== null && unit.tenantId !== tenantId && unit.tenantId !== 1)) {
     throw new AppError('Unit not found', 404);
   }
 
