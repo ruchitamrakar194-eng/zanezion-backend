@@ -77,7 +77,8 @@ export const createDelivery = async (data, performerId, tenantId) => {
           type: 'product',
           unit: 'pcs',
           unitPrice: 0,
-          inventoryStatus: 'in_stock'
+          inventoryStatus: 'in_stock',
+          sku: 'MISC-001'
         }
       });
     }
