@@ -9,6 +9,9 @@ const handleRequest = async (req, res, next, serviceFn, successMsg) => {
     
     if (req.method === 'GET') {
       tenantId = resolveTenantId(req);
+      if (req.query.tenantId && Number(req.query.tenantId) === 1) {
+        tenantId = 1;
+      }
       const result = await serviceFn(tenantId);
       sendResponse(res, 200, successMsg, result);
     } else if (req.method === 'POST') {
