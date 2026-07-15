@@ -71,8 +71,13 @@ export const createPurchaseRequest = async (data, performerId, tenantId) => {
 };
 
 export const getPurchaseRequests = async (tenantId, query, user) => {
-  // Data Isolation: If the user is STAFF (or similar non-admin), force the query to only return their requests
-  if (user && user.role?.name === 'STAFF') {
+  const roleName = String(user?.role?.name || user?.role || '').toUpperCase();
+  const isClient = roleName.includes('CLIENT') || roleName.includes('CUSTOMER');
+
+  if (isClient) {
+    // Client only sees requests once they are accepted (approved)
+    query.status = 'approved';
+  } else if (user && user.role?.name === 'STAFF') {
     query.requestedBy = await getEmployeeIdByUserId(user.id);
   }
   return await prRepository.findAllPurchaseRequests(tenantId, query);
