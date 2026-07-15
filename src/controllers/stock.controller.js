@@ -1,6 +1,7 @@
 import * as stockService from '../services/stock.service.js';
 import { sendResponse } from '../utils/response.js';
 
+import { resolveTenantId } from '../utils/tenantResolver.js';
 export const adjustStock = async (req, res, next) => {
   try {
     const isSuperAdmin = req.user.role?.name === 'SUPER_ADMIN';
@@ -27,8 +28,7 @@ export const transferStock = async (req, res, next) => {
 
 export const getStock = async (req, res, next) => {
   try {
-    const isSuperAdmin = req.user.role?.name === 'SUPER_ADMIN';
-    const tenantIdToFilter = isSuperAdmin && !req.query.tenantId ? null : (req.query.tenantId ? Number(req.query.tenantId) : req.user.tenantId);
+    const tenantIdToFilter = resolveTenantId(req);
 
     const result = await stockService.getStock(tenantIdToFilter, req.query);
     sendResponse(res, 200, 'Stock fetched successfully', result);
@@ -39,8 +39,7 @@ export const getStock = async (req, res, next) => {
 
 export const getMovements = async (req, res, next) => {
   try {
-    const isSuperAdmin = req.user.role?.name === 'SUPER_ADMIN';
-    const tenantIdToFilter = isSuperAdmin && !req.query.tenantId ? null : (req.query.tenantId ? Number(req.query.tenantId) : req.user.tenantId);
+    const tenantIdToFilter = resolveTenantId(req);
 
     const result = await stockService.getMovements(tenantIdToFilter, req.query);
     sendResponse(res, 200, 'Stock movements fetched successfully', result);

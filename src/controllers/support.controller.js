@@ -2,13 +2,14 @@ import * as supportService from '../services/support.service.js';
 import { sendResponse } from '../utils/response.js';
 import { emitToTenant } from '../utils/socket.js';
 
+import { resolveTenantId } from '../utils/tenantResolver.js';
 const handleRequest = async (req, res, next, serviceFn, successMsg, eventName) => {
   try {
     const isSuperAdmin = req.user.role?.name === 'SUPER_ADMIN';
     let tenantId;
     
     if (req.method === 'GET') {
-      tenantId = isSuperAdmin && !req.query.tenantId ? null : (req.query.tenantId ? Number(req.query.tenantId) : req.user.tenantId);
+      tenantId = resolveTenantId(req);
       const result = await serviceFn(tenantId);
       sendResponse(res, 200, successMsg, result);
     } else if (req.method === 'POST') {
@@ -17,12 +18,12 @@ const handleRequest = async (req, res, next, serviceFn, successMsg, eventName) =
       if (eventName) emitToTenant(result.tenantId || tenantId, eventName, result);
       sendResponse(res, 201, successMsg, result);
     } else if (req.method === 'PUT') {
-      tenantId = isSuperAdmin ? null : req.user.tenantId;
+      tenantId = resolveTenantId(req);
       const result = await serviceFn(req.params.id, req.body, tenantId, req.user.id);
       if (eventName) emitToTenant(result.tenantId || tenantId || req.user.tenantId, eventName, result);
       sendResponse(res, 200, successMsg, result);
     } else if (req.method === 'DELETE') {
-      tenantId = isSuperAdmin ? null : req.user.tenantId;
+      tenantId = resolveTenantId(req);
       await serviceFn(req.params.id, tenantId, req.user.id);
       if (eventName) emitToTenant(tenantId || req.user.tenantId, eventName, { id: req.params.id, deleted: true });
       sendResponse(res, 200, successMsg, null);
