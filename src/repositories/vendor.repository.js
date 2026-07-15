@@ -24,7 +24,7 @@ export const findAllVendors = async (tenantId, query) => {
   const skip = (page - 1) * limit;
 
   const where = {
-    ...(tenantId !== null && { tenantId }),
+    ...(tenantId !== null && (Array.isArray(tenantId) ? { tenantId: { in: tenantId.map(Number) } } : { tenantId: Number(tenantId) })),
     ...(search && {
       OR: [
         { companyName: { contains: search } },

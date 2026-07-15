@@ -83,7 +83,9 @@ export const getWarehouses = async (tenantId, query) => {
 
 export const getWarehouseById = async (id, tenantId) => {
   const warehouse = await warehouseRepo.findWarehouseById(id);
-  if (!warehouse || (tenantId !== null && warehouse.tenantId !== tenantId)) {
+  const hasAccess = tenantId === null || 
+                    (Array.isArray(tenantId) ? tenantId.map(Number).includes(Number(warehouse?.tenantId)) : Number(warehouse?.tenantId) === Number(tenantId));
+  if (!warehouse || !hasAccess) {
     throw new AppError('Warehouse not found', 404);
   }
   return warehouse;

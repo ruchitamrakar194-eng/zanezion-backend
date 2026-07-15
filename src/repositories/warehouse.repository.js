@@ -19,7 +19,7 @@ export const findAllWarehouses = async (tenantId, query) => {
   const skip = (page - 1) * limit;
 
   const where = {
-    ...(tenantId !== null && { tenantId }),
+    ...(tenantId !== null && (Array.isArray(tenantId) ? { tenantId: { in: tenantId.map(Number) } } : { tenantId: Number(tenantId) })),
     ...(search && { name: { contains: search } }),
     ...(status && { status }),
     ...(managerId && { managerId: Number(managerId) })
