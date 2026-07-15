@@ -109,16 +109,14 @@ export const assignMission = async (req, res, next) => {
   }
 };
 
-export const updateMissionStatus = async (req, res, next) => {
+
+
+export const deleteMission = async (req, res, next) => {
   try {
     const tenantIdToFilter = resolveTenantId(req);
-    const missionId = req.params.id;
-    const { status } = req.body;
-
-    const mission = await missionService.updateMissionStatus(missionId, status, tenantIdToFilter, req.user?.id || 1);
-    sendResponse(res, 200, 'Mission status updated successfully', mission);
+    await missionService.deleteMission(req.params.id, tenantIdToFilter, req.user?.id || 1);
+    sendResponse(res, 200, 'Mission deleted successfully', []);
   } catch (error) {
     next(error);
   }
 };
-

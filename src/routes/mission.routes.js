@@ -17,5 +17,6 @@ router.post('/:id/start', checkPermission('MISSIONS', 'MANAGE'), missionControll
 router.post('/:id/pod', checkPermission('MISSIONS', 'COMPLETE'), validate(submitPODSchema), missionController.submitPOD);
 router.put('/:id/assign', checkPermission('MISSIONS', 'MANAGE'), missionController.assignMission);
 router.put('/:id/status', checkPermission('MISSIONS', 'MANAGE'), missionController.updateMissionStatus);
+router.delete('/:id', checkPermission('MISSIONS', 'MANAGE'), missionController.deleteMission);
 
 export default router;

@@ -484,3 +484,20 @@ export const updateMissionStatus = async (id, status, tenantId, performerId) => 
   }
 };
 
+export const deleteMission = async (id, tenantId, performerId) => {
+  const mission = await missionRepo.findMissionById(id);
+  if (!mission || (tenantId !== null && mission.tenantId !== tenantId)) {
+    throw new AppError('Mission not found', 404);
+  }
+
+  await missionRepo.deleteMission(mission.id);
+
+  await logAudit({
+    module: 'MISSIONS',
+    action: 'DELETE',
+    description: `Deleted Mission ${mission.missionNumber}`,
+    performedBy: performerId
+  });
+
+  return true;
+};
