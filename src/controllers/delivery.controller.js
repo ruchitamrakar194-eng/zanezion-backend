@@ -3,6 +3,7 @@ import { sendResponse } from '../utils/response.js';
 import { emitToTenant } from '../utils/socket.js';
 
 import { resolveTenantId } from '../utils/tenantResolver.js';
+
 export const createDelivery = async (req, res, next) => {
   try {
     const isSuperAdmin = req.user.role?.name === 'SUPER_ADMIN';
@@ -18,9 +19,14 @@ export const createDelivery = async (req, res, next) => {
 
 export const getDeliveries = async (req, res, next) => {
   try {
-    const tenantIdToFilter = resolveTenantId(req);
+    let tenantIdToFilter = resolveTenantId(req);
 
-    if (['INDIVIDUAL_CLIENT', 'CUSTOMER'].includes(req.user.role?.name?.toUpperCase())) {
+    const roleName = req.user.role?.name?.toUpperCase();
+    if (['LOGISTICS', 'OPERATIONS', 'STAFF', 'FIELD_STAFF', 'CONCIERGE', 'SECURITY', 'DRIVER'].includes(roleName)) {
+      tenantIdToFilter = null; // Remove tenant restriction for central operational roles
+    }
+
+    if (['INDIVIDUAL_CLIENT', 'CUSTOMER'].includes(roleName)) {
       req.query.clientId = req.user.clientId;
     }
 
@@ -33,7 +39,13 @@ export const getDeliveries = async (req, res, next) => {
 
 export const getDeliveryById = async (req, res, next) => {
   try {
-    const tenantIdToFilter = resolveTenantId(req);
+    let tenantIdToFilter = resolveTenantId(req);
+    const roleName = req.user.role?.name?.toUpperCase();
+    
+    if (['LOGISTICS', 'OPERATIONS', 'STAFF', 'FIELD_STAFF', 'CONCIERGE', 'SECURITY', 'DRIVER'].includes(roleName)) {
+      tenantIdToFilter = null;
+    }
+
     const clientIdToFilter = ['INDIVIDUAL_CLIENT'].includes(req.user.role?.name) ? req.user.clientId : null;
 
     const delivery = await deliveryService.getDeliveryById(Number(req.params.id), tenantIdToFilter, clientIdToFilter);

@@ -2,6 +2,7 @@ import * as missionService from '../services/mission.service.js';
 import { sendResponse } from '../utils/response.js';
 
 import { resolveTenantId } from '../utils/tenantResolver.js';
+
 export const createMission = async (req, res, next) => {
   try {
     const isSuperAdmin = req.user.role?.name === 'SUPER_ADMIN';
@@ -31,7 +32,13 @@ export const createMission = async (req, res, next) => {
 
 export const getMissions = async (req, res, next) => {
   try {
-    const tenantIdToFilter = resolveTenantId(req);
+    let tenantIdToFilter = resolveTenantId(req);
+
+    // Allow central ZaneZion operational staff to see cross-tenant missions
+    const roleName = req.user.role?.name?.toUpperCase();
+    if (['LOGISTICS', 'OPERATIONS', 'STAFF', 'FIELD_STAFF', 'CONCIERGE', 'SECURITY', 'DRIVER'].includes(roleName)) {
+      tenantIdToFilter = null;
+    }
 
     const result = await missionService.getMissions(tenantIdToFilter, req.query);
     sendResponse(res, 200, 'Missions fetched successfully', result);
@@ -42,7 +49,12 @@ export const getMissions = async (req, res, next) => {
 
 export const getMissionById = async (req, res, next) => {
   try {
-    const tenantIdToFilter = resolveTenantId(req);
+    let tenantIdToFilter = resolveTenantId(req);
+    
+    const roleName = req.user.role?.name?.toUpperCase();
+    if (['LOGISTICS', 'OPERATIONS', 'STAFF', 'FIELD_STAFF', 'CONCIERGE', 'SECURITY', 'DRIVER'].includes(roleName)) {
+      tenantIdToFilter = null;
+    }
 
     const mission = await missionService.getMissionById(req.params.id, tenantIdToFilter);
     sendResponse(res, 200, 'Mission fetched successfully', mission);
@@ -108,7 +120,8 @@ export const assignMission = async (req, res, next) => {
     next(error);
   }
 };
-export const updateMissionStatus = async (req, res, next) => {
+
+export const updateMissionStatus = async (req, res, next) => {
   try {
     const tenantIdToFilter = resolveTenantId(req);
     const missionId = req.params.id;
