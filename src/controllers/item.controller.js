@@ -15,9 +15,18 @@ export const createItem = async (req, res, next) => {
   }
 };
 
+const checkIsClient = (user) => {
+  const roleName = String(user?.role?.name || user?.role || '').toUpperCase();
+  return roleName.includes('CLIENT') || roleName.includes('CUSTOMER');
+};
+
 export const getItems = async (req, res, next) => {
   try {
-    const tenantIdToFilter = resolveTenantId(req);
+    const isSuperAdmin = req.user.role?.name === 'SUPER_ADMIN';
+    const isClient = checkIsClient(req.user);
+    const tenantIdToFilter = isSuperAdmin && !req.query.tenantId ? null :
+                             isClient ? 1 :
+                             (req.query.tenantId ? Number(req.query.tenantId) : req.user.tenantId);
 
     const result = await itemService.getItems(tenantIdToFilter, req.query);
     sendResponse(res, 200, 'Items fetched successfully', result);
@@ -28,7 +37,9 @@ export const getItems = async (req, res, next) => {
 
 export const getItemById = async (req, res, next) => {
   try {
-    const tenantIdToFilter = resolveTenantId(req);
+    const isSuperAdmin = req.user.role?.name === 'SUPER_ADMIN';
+    const isClient = checkIsClient(req.user);
+    const tenantIdToFilter = isSuperAdmin ? null : isClient ? 1 : (req.user.tenantId || 1);
 
     const item = await itemService.getItemById(Number(req.params.id), tenantIdToFilter);
     sendResponse(res, 200, 'Item fetched successfully', item);

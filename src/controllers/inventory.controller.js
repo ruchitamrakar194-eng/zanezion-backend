@@ -40,9 +40,16 @@ export const getLossAssessments = async (req, res, next) => {
   }
 };
 
+const checkIsClient = (user) => {
+  const roleName = String(user?.role?.name || user?.role || '').toUpperCase();
+  return roleName.includes('CLIENT') || roleName.includes('CUSTOMER');
+};
+
 export const getInventory = async (req, res, next) => {
   try {
-    const tenantId = resolveTenantId(req);
+    const isSuperAdmin = req.user.role?.name === 'SUPER_ADMIN';
+    const isClient = checkIsClient(req.user);
+    const tenantId = isSuperAdmin ? null : isClient ? 1 : (req.user.tenantId || 1);
 
     const items = await prisma.item.findMany({
       where: {

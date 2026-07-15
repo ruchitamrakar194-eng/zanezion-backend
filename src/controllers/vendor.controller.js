@@ -34,9 +34,18 @@ export const createVendor = async (req, res, next) => {
   }
 };
 
+const checkIsClient = (user) => {
+  const roleName = String(user?.role?.name || user?.role || '').toUpperCase();
+  return roleName.includes('CLIENT') || roleName.includes('CUSTOMER');
+};
+
 export const getVendors = async (req, res, next) => {
   try {
-    const tenantIdToFilter = resolveTenantId(req);
+    const isSuperAdmin = req.user.role?.name === 'SUPER_ADMIN';
+    const isClient = checkIsClient(req.user);
+    const tenantIdToFilter = isSuperAdmin && !req.query.tenantId ? null :
+                             isClient ? 1 :
+                             (req.query.tenantId ? Number(req.query.tenantId) : req.user.tenantId);
 
     const result = await vendorService.getVendors(tenantIdToFilter, req.query);
     sendResponse(res, 200, 'Vendors fetched successfully', result);
@@ -47,7 +56,9 @@ export const getVendors = async (req, res, next) => {
 
 export const getVendorById = async (req, res, next) => {
   try {
-    const tenantIdToFilter = resolveTenantId(req);
+    const isSuperAdmin = req.user.role?.name === 'SUPER_ADMIN';
+    const isClient = checkIsClient(req.user);
+    const tenantIdToFilter = isSuperAdmin ? null : isClient ? 1 : (req.user.tenantId || 1);
 
     const vendor = await vendorService.getVendorById(Number(req.params.id), tenantIdToFilter);
     sendResponse(res, 200, 'Vendor fetched successfully', vendor);

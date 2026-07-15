@@ -25,9 +25,18 @@ export const createWarehouse = async (req, res, next) => {
   }
 };
 
+const checkIsClient = (user) => {
+  const roleName = String(user?.role?.name || user?.role || '').toUpperCase();
+  return roleName.includes('CLIENT') || roleName.includes('CUSTOMER');
+};
+
 export const getWarehouses = async (req, res, next) => {
   try {
-    const tenantIdToFilter = resolveTenantId(req);
+    const isSuperAdmin = req.user.role?.name === 'SUPER_ADMIN';
+    const isClient = checkIsClient(req.user);
+    const tenantIdToFilter = isSuperAdmin && !req.query.tenantId ? null :
+                             isClient ? 1 :
+                             (req.query.tenantId ? Number(req.query.tenantId) : req.user.tenantId);
 
     const result = await warehouseService.getWarehouses(tenantIdToFilter, req.query);
     sendResponse(res, 200, 'Warehouses fetched successfully', result);
@@ -38,7 +47,9 @@ export const getWarehouses = async (req, res, next) => {
 
 export const getWarehouseById = async (req, res, next) => {
   try {
-    const tenantIdToFilter = resolveTenantId(req);
+    const isSuperAdmin = req.user.role?.name === 'SUPER_ADMIN';
+    const isClient = checkIsClient(req.user);
+    const tenantIdToFilter = isSuperAdmin ? null : isClient ? 1 : (req.user.tenantId || 1);
 
     const warehouse = await warehouseService.getWarehouseById(Number(req.params.id), tenantIdToFilter);
     sendResponse(res, 200, 'Warehouse fetched successfully', warehouse);

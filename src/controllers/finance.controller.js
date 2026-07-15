@@ -1,16 +1,18 @@
 import * as financeService from '../services/finance.service.js';
 import { sendResponse } from '../utils/response.js';
-import { resolveTenantId } from '../utils/tenantResolver.js';
+import AppError from '../utils/AppError.js';
 
 export const getPayrolls = async (req, res, next) => {
   try {
-    const isAdmin = req.user.role?.name === 'ADMIN' || req.user.role?.name === 'SUPER_ADMIN';
-    const tenantIdToFilter = resolveTenantId(req);
-    
+    const isSuperAdmin = req.user.role?.name === 'SUPER_ADMIN';
+    const isClient = ['BUSINESS_CLIENT', 'INDIVIDUAL_CLIENT'].includes(req.user.role?.name);
+    const isAdmin = req.user.role?.name === 'ADMIN' || isSuperAdmin || isClient;
+    const tenantIdToFilter = isSuperAdmin && !req.query.tenantId ? null : (req.query.tenantId ? Number(req.query.tenantId) : req.user.tenantId);
+
     // Non-admins can only see their own payroll records
     const filterUserId = isAdmin ? null : req.user.id;
     const payrolls = await financeService.getPayrolls(tenantIdToFilter || 1, filterUserId);
-    
+
     // Transform to match frontend expectations
     const formattedData = payrolls.map(p => ({
       ...p,
@@ -36,12 +38,13 @@ export const getPayrolls = async (req, res, next) => {
 export const createPayroll = async (req, res, next) => {
   try {
     const isSuperAdmin = req.user.role?.name === 'SUPER_ADMIN';
-    const isAdmin = req.user.role?.name === 'ADMIN';
+    const isClient = ['BUSINESS_CLIENT', 'INDIVIDUAL_CLIENT'].includes(req.user.role?.name);
+    const isAdmin = req.user.role?.name === 'ADMIN' || isClient;
     if (!isSuperAdmin && !isAdmin) {
       throw new AppError('Access denied. Admin permissions required.', 403);
     }
     const tenantIdToUse = isSuperAdmin ? (req.body.tenantId || req.user.tenantId || 1) : (req.user.tenantId || 1);
-    
+
     const payroll = await financeService.createPayroll(tenantIdToUse, req.user.id, req.body);
     sendResponse(res, 201, 'Payroll created successfully', payroll);
   } catch (error) {
@@ -52,12 +55,13 @@ export const createPayroll = async (req, res, next) => {
 export const updatePayroll = async (req, res, next) => {
   try {
     const isSuperAdmin = req.user.role?.name === 'SUPER_ADMIN';
-    const isAdmin = req.user.role?.name === 'ADMIN';
+    const isClient = ['BUSINESS_CLIENT', 'INDIVIDUAL_CLIENT'].includes(req.user.role?.name);
+    const isAdmin = req.user.role?.name === 'ADMIN' || isClient;
     if (!isSuperAdmin && !isAdmin) {
       throw new AppError('Access denied. Admin permissions required.', 403);
     }
     const tenantIdToUse = isSuperAdmin ? (req.body.tenantId || req.user.tenantId || 1) : (req.user.tenantId || 1);
-    
+
     const payroll = await financeService.updatePayroll(tenantIdToUse, req.user.id, req.params.id, req.body);
     sendResponse(res, 200, 'Payroll updated successfully', payroll);
   } catch (error) {
@@ -68,12 +72,13 @@ export const updatePayroll = async (req, res, next) => {
 export const deletePayroll = async (req, res, next) => {
   try {
     const isSuperAdmin = req.user.role?.name === 'SUPER_ADMIN';
-    const isAdmin = req.user.role?.name === 'ADMIN';
+    const isClient = ['BUSINESS_CLIENT', 'INDIVIDUAL_CLIENT'].includes(req.user.role?.name);
+    const isAdmin = req.user.role?.name === 'ADMIN' || isClient;
     if (!isSuperAdmin && !isAdmin) {
       throw new AppError('Access denied. Admin permissions required.', 403);
     }
     const tenantIdToUse = isSuperAdmin ? (req.query.tenantId || req.user.tenantId || 1) : (req.user.tenantId || 1);
-    
+
     await financeService.deletePayroll(tenantIdToUse, req.user.id, req.params.id);
     sendResponse(res, 200, 'Payroll deleted successfully');
   } catch (error) {
