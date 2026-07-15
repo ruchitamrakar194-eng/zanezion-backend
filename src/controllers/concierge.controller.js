@@ -4,7 +4,7 @@ import { sendResponse } from '../utils/response.js';
 import { resolveTenantId } from '../utils/tenantResolver.js';
 const handleRequest = async (req, res, next, serviceFn, successMsg) => {
   try {
-    const isSuperAdmin = req.user.role?.name === 'SUPER_ADMIN';
+    const isSuperAdmin = ['SUPER_ADMIN', 'ADMIN'].includes(req.user.role?.name || req.user.role);
     let tenantId;
     
     if (req.method === 'GET') {
