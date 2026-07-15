@@ -95,7 +95,12 @@ export const createDelivery = async (data, performerId, tenantId) => {
     deliveryData.warehouseId = adHocWarehouseId;
 
     const employee = await prisma.employee.findUnique({ where: { userId: performerId } });
-    const orderCreatedById = employee ? employee.id : 1;
+    let orderCreatedById = employee?.id;
+    if (!orderCreatedById) {
+      const fallbackEmp = await prisma.employee.findFirst({ where: { tenantId } }) || await prisma.employee.findFirst();
+      if (!fallbackEmp) throw new AppError('No staff found in system to assign as order creator. Please add staff first.', 400);
+      orderCreatedById = fallbackEmp.id;
+    }
 
     let orderNumberToUse = undefined;
     if (data.orderId) {
