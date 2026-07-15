@@ -49,7 +49,12 @@ export const createDelivery = async (data, performerId, tenantId) => {
 
   if (!order || (tenantId !== null && order.tenantId !== tenantId)) {
     // Auto-create an ad-hoc order to support "Deploy New Mission" standalone flow
-    let clientIdToUse = data.clientId;
+    let clientIdToUse = data.clientId ? Number(data.clientId) : null;
+    if (clientIdToUse) {
+      const clientExists = await prisma.client.findUnique({ where: { id: clientIdToUse } });
+      if (!clientExists) clientIdToUse = null;
+    }
+    
     if (!clientIdToUse) {
       // 1. Try to find a client record by tenantId
       let defaultClient = await prisma.client.findFirst({ where: { ...(tenantId != null && { tenantId }) } });
