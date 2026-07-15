@@ -14,10 +14,12 @@ router.post('/projects', checkPermission('PROJECTS', 'CREATE'), orderController.
 router.post('/convert/:orderId', checkPermission('PROJECTS', 'CREATE'), orderController.convertOrderToProject);
 router.put('/projects/:id', checkPermission('PROJECTS', 'UPDATE'), orderController.updateProject);
 router.delete('/projects/:id', checkPermission('PROJECTS', 'DELETE'), orderController.deleteProject);
+router.get('/:id/timeline', checkPermission('ORDERS', 'READ'), orderController.getOrderTimeline);
 router.get('/:id', checkPermission('ORDERS', 'READ'), orderController.getOrderById);
 router.post('/', checkPermission('ORDERS', 'CREATE'), validate(createOrderSchema), orderController.createOrder);
 router.put('/:id', checkPermission('ORDERS', 'UPDATE'), orderController.updateOrder);
 router.put('/:id/status', checkPermission('ORDERS', 'APPROVE'), validate(updateOrderStatusSchema), orderController.updateOrderStatus);
 router.delete('/:id', checkPermission('ORDERS', 'DELETE'), orderController.deleteOrder);
+
 
 export default router;

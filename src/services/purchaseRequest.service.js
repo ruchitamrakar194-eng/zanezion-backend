@@ -72,14 +72,14 @@ export const createPurchaseRequest = async (data, performerId, tenantId) => {
 
 export const getPurchaseRequests = async (tenantId, query, user) => {
   const roleName = String(user?.role?.name || user?.role || '').toUpperCase();
-  const isClient = roleName.includes('CLIENT') || roleName.includes('CUSTOMER');
+  const isStaff = roleName === 'STAFF';
 
-  if (isClient) {
-    // Client only sees requests once they are accepted (approved)
-    query.status = 'approved';
-  } else if (user && user.role?.name === 'STAFF') {
+  if (isStaff) {
+    // Staff members only see their own requests
     query.requestedBy = await getEmployeeIdByUserId(user.id);
   }
+  // Clients see ALL their own PRs (scoped by tenantId) so they can track status.
+  // Admin sees all PRs from all tenants (tenantId = null).
   return await prRepository.findAllPurchaseRequests(tenantId, query);
 };
 
