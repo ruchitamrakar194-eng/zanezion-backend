@@ -47,13 +47,9 @@ const checkIsClient = (user) => {
 
 export const getInventory = async (req, res, next) => {
   try {
-<<<<<<< HEAD
     const isSuperAdmin = req.user.role?.name === 'SUPER_ADMIN';
     const isClient = checkIsClient(req.user);
     const tenantId = isSuperAdmin ? null : isClient ? 1 : (req.user.tenantId || 1);
-=======
-    const tenantId = resolveTenantId(req);
->>>>>>> 8921c49a6411225fec72c47e06c411250c3a4939
 
     const items = await prisma.item.findMany({
       where: {

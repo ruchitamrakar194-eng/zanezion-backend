@@ -22,15 +22,11 @@ const checkIsClient = (user) => {
 
 export const getItems = async (req, res, next) => {
   try {
-<<<<<<< HEAD
     const isSuperAdmin = req.user.role?.name === 'SUPER_ADMIN';
     const isClient = checkIsClient(req.user);
     const tenantIdToFilter = isSuperAdmin && !req.query.tenantId ? null :
                              isClient ? 1 :
                              (req.query.tenantId ? Number(req.query.tenantId) : req.user.tenantId);
-=======
-    const tenantIdToFilter = resolveTenantId(req);
->>>>>>> 8921c49a6411225fec72c47e06c411250c3a4939
 
     const result = await itemService.getItems(tenantIdToFilter, req.query);
     sendResponse(res, 200, 'Items fetched successfully', result);
@@ -41,13 +37,9 @@ export const getItems = async (req, res, next) => {
 
 export const getItemById = async (req, res, next) => {
   try {
-<<<<<<< HEAD
     const isSuperAdmin = req.user.role?.name === 'SUPER_ADMIN';
     const isClient = checkIsClient(req.user);
     const tenantIdToFilter = isSuperAdmin ? null : isClient ? 1 : (req.user.tenantId || 1);
-=======
-    const tenantIdToFilter = resolveTenantId(req);
->>>>>>> 8921c49a6411225fec72c47e06c411250c3a4939
 
     const item = await itemService.getItemById(Number(req.params.id), tenantIdToFilter);
     sendResponse(res, 200, 'Item fetched successfully', item);

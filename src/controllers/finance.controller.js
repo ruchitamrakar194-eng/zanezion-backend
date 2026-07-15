@@ -1,19 +1,14 @@
 import * as financeService from '../services/finance.service.js';
 import { sendResponse } from '../utils/response.js';
-import { resolveTenantId } from '../utils/tenantResolver.js';
+import AppError from '../utils/AppError.js';
 
 export const getPayrolls = async (req, res, next) => {
   try {
-<<<<<<< HEAD
     const isSuperAdmin = req.user.role?.name === 'SUPER_ADMIN';
-    const isAdmin = req.user.role?.name === 'ADMIN';
+    const isClient = ['BUSINESS_CLIENT', 'INDIVIDUAL_CLIENT'].includes(req.user.role?.name);
+    const isAdmin = req.user.role?.name === 'ADMIN' || isSuperAdmin || isClient;
     const tenantIdToFilter = isSuperAdmin && !req.query.tenantId ? null : (req.query.tenantId ? Number(req.query.tenantId) : req.user.tenantId);
 
-=======
-    const isAdmin = req.user.role?.name === 'ADMIN' || req.user.role?.name === 'SUPER_ADMIN';
-    const tenantIdToFilter = resolveTenantId(req);
-    
->>>>>>> 8921c49a6411225fec72c47e06c411250c3a4939
     // Non-admins can only see their own payroll records
     const filterUserId = isAdmin ? null : req.user.id;
     const payrolls = await financeService.getPayrolls(tenantIdToFilter || 1, filterUserId);
@@ -43,7 +38,8 @@ export const getPayrolls = async (req, res, next) => {
 export const createPayroll = async (req, res, next) => {
   try {
     const isSuperAdmin = req.user.role?.name === 'SUPER_ADMIN';
-    const isAdmin = req.user.role?.name === 'ADMIN';
+    const isClient = ['BUSINESS_CLIENT', 'INDIVIDUAL_CLIENT'].includes(req.user.role?.name);
+    const isAdmin = req.user.role?.name === 'ADMIN' || isClient;
     if (!isSuperAdmin && !isAdmin) {
       throw new AppError('Access denied. Admin permissions required.', 403);
     }
@@ -59,7 +55,8 @@ export const createPayroll = async (req, res, next) => {
 export const updatePayroll = async (req, res, next) => {
   try {
     const isSuperAdmin = req.user.role?.name === 'SUPER_ADMIN';
-    const isAdmin = req.user.role?.name === 'ADMIN';
+    const isClient = ['BUSINESS_CLIENT', 'INDIVIDUAL_CLIENT'].includes(req.user.role?.name);
+    const isAdmin = req.user.role?.name === 'ADMIN' || isClient;
     if (!isSuperAdmin && !isAdmin) {
       throw new AppError('Access denied. Admin permissions required.', 403);
     }
@@ -75,7 +72,8 @@ export const updatePayroll = async (req, res, next) => {
 export const deletePayroll = async (req, res, next) => {
   try {
     const isSuperAdmin = req.user.role?.name === 'SUPER_ADMIN';
-    const isAdmin = req.user.role?.name === 'ADMIN';
+    const isClient = ['BUSINESS_CLIENT', 'INDIVIDUAL_CLIENT'].includes(req.user.role?.name);
+    const isAdmin = req.user.role?.name === 'ADMIN' || isClient;
     if (!isSuperAdmin && !isAdmin) {
       throw new AppError('Access denied. Admin permissions required.', 403);
     }

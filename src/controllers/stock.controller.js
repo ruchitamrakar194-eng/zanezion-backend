@@ -33,15 +33,11 @@ const checkIsClient = (user) => {
 
 export const getStock = async (req, res, next) => {
   try {
-<<<<<<< HEAD
     const isSuperAdmin = req.user.role?.name === 'SUPER_ADMIN';
     const isClient = checkIsClient(req.user);
     const tenantIdToFilter = isSuperAdmin && !req.query.tenantId ? null :
                              isClient ? 1 :
                              (req.query.tenantId ? Number(req.query.tenantId) : req.user.tenantId);
-=======
-    const tenantIdToFilter = resolveTenantId(req);
->>>>>>> 8921c49a6411225fec72c47e06c411250c3a4939
 
     const result = await stockService.getStock(tenantIdToFilter, req.query);
     sendResponse(res, 200, 'Stock fetched successfully', result);
@@ -52,15 +48,11 @@ export const getStock = async (req, res, next) => {
 
 export const getMovements = async (req, res, next) => {
   try {
-<<<<<<< HEAD
     const isSuperAdmin = req.user.role?.name === 'SUPER_ADMIN';
     const isClient = checkIsClient(req.user);
     const tenantIdToFilter = isSuperAdmin && !req.query.tenantId ? null :
                              isClient ? 1 :
                              (req.query.tenantId ? Number(req.query.tenantId) : req.user.tenantId);
-=======
-    const tenantIdToFilter = resolveTenantId(req);
->>>>>>> 8921c49a6411225fec72c47e06c411250c3a4939
 
     const result = await stockService.getMovements(tenantIdToFilter, req.query);
     sendResponse(res, 200, 'Stock movements fetched successfully', result);
