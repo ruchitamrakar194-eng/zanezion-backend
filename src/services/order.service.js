@@ -108,7 +108,8 @@ export const createOrder = async (data, performerId, tenantId) => {
   orderData.createdById = employee ? employee.id : 1;
   orderData.status = data.status || orderData.status || 'draft';
 
-  const newOrder = await orderRepo.createOrder(orderData, validOrderItems, tenantId);
+  const orderTenantId = client ? Number(client.tenantId) : (tenantId || 1);
+  const newOrder = await orderRepo.createOrder(orderData, validOrderItems, orderTenantId);
 
   await logAudit({
     module: 'ORDERS',
