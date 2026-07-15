@@ -1,6 +1,7 @@
 import * as trackingService from '../services/tracking.service.js';
 import { sendResponse } from '../utils/response.js';
 
+import { resolveTenantId } from '../utils/tenantResolver.js';
 export const createTracking = async (req, res, next) => {
   try {
     const isSuperAdmin = req.user.role?.name === 'SUPER_ADMIN';
@@ -15,8 +16,7 @@ export const createTracking = async (req, res, next) => {
 
 export const getTracking = async (req, res, next) => {
   try {
-    const isSuperAdmin = req.user.role?.name === 'SUPER_ADMIN';
-    const tenantIdToFilter = isSuperAdmin && !req.query.tenantId ? null : (req.query.tenantId ? Number(req.query.tenantId) : req.user.tenantId);
+    const tenantIdToFilter = resolveTenantId(req);
 
     const result = await trackingService.getTracking(tenantIdToFilter);
     sendResponse(res, 200, 'Tracking fetched successfully', result);
@@ -27,8 +27,7 @@ export const getTracking = async (req, res, next) => {
 
 export const updateTracking = async (req, res, next) => {
   try {
-    const isSuperAdmin = req.user.role?.name === 'SUPER_ADMIN';
-    const tenantIdToFilter = isSuperAdmin ? null : (req.user.tenantId || 1);
+    const tenantIdToFilter = resolveTenantId(req);
 
     const tracking = await trackingService.updateTracking(req.params.id, req.body, tenantIdToFilter, req.user.id);
     sendResponse(res, 200, 'Tracking updated successfully', tracking);
@@ -39,8 +38,7 @@ export const updateTracking = async (req, res, next) => {
 
 export const deleteTracking = async (req, res, next) => {
   try {
-    const isSuperAdmin = req.user.role?.name === 'SUPER_ADMIN';
-    const tenantIdToFilter = isSuperAdmin ? null : (req.user.tenantId || 1);
+    const tenantIdToFilter = resolveTenantId(req);
 
     await trackingService.deleteTracking(req.params.id, tenantIdToFilter, req.user.id);
     sendResponse(res, 200, 'Tracking deleted successfully', null);

@@ -1,6 +1,7 @@
 import * as invoiceService from '../services/invoice.service.js';
 import { sendResponse } from '../utils/response.js';
 
+import { resolveTenantId } from '../utils/tenantResolver.js';
 export const generateInvoice = async (req, res, next) => {
   try {
     const isSuperAdmin = req.user.role?.name === 'SUPER_ADMIN';
@@ -15,8 +16,7 @@ export const generateInvoice = async (req, res, next) => {
 
 export const getInvoices = async (req, res, next) => {
   try {
-    const isSuperAdmin = req.user.role?.name === 'SUPER_ADMIN';
-    const tenantIdToFilter = isSuperAdmin && !req.query.tenantId ? null : (req.query.tenantId ? Number(req.query.tenantId) : req.user.tenantId);
+    const tenantIdToFilter = resolveTenantId(req);
 
     if (['INDIVIDUAL_CLIENT'].includes(req.user.role?.name)) {
       req.query.clientId = req.user.clientId;
@@ -31,8 +31,7 @@ export const getInvoices = async (req, res, next) => {
 
 export const getInvoiceById = async (req, res, next) => {
   try {
-    const isSuperAdmin = req.user.role?.name === 'SUPER_ADMIN';
-    const tenantIdToFilter = isSuperAdmin ? null : (req.user.tenantId || 1);
+    const tenantIdToFilter = resolveTenantId(req);
     const clientIdToFilter = ['INDIVIDUAL_CLIENT'].includes(req.user.role?.name) ? req.user.clientId : null;
 
     const invoice = await invoiceService.getInvoiceById(Number(req.params.id), tenantIdToFilter, clientIdToFilter);
@@ -44,8 +43,7 @@ export const getInvoiceById = async (req, res, next) => {
 
 export const updateInvoiceStatus = async (req, res, next) => {
   try {
-    const isSuperAdmin = req.user.role?.name === 'SUPER_ADMIN';
-    const tenantIdToFilter = isSuperAdmin ? null : (req.user.tenantId || 1);
+    const tenantIdToFilter = resolveTenantId(req);
     const { status } = req.body;
 
     const updatedInvoice = await invoiceService.updateInvoiceStatus(Number(req.params.id), status, tenantIdToFilter, req.user.id);
@@ -57,8 +55,7 @@ export const updateInvoiceStatus = async (req, res, next) => {
 
 export const updateInvoice = async (req, res, next) => {
   try {
-    const isSuperAdmin = req.user.role?.name === 'SUPER_ADMIN';
-    const tenantIdToFilter = isSuperAdmin ? null : (req.user.tenantId || 1);
+    const tenantIdToFilter = resolveTenantId(req);
 
     const updatedInvoice = await invoiceService.updateInvoice(Number(req.params.id), req.body, tenantIdToFilter, req.user.id);
     sendResponse(res, 200, 'Invoice updated successfully', updatedInvoice);
@@ -69,8 +66,7 @@ export const updateInvoice = async (req, res, next) => {
 
 export const deleteInvoice = async (req, res, next) => {
   try {
-    const isSuperAdmin = req.user.role?.name === 'SUPER_ADMIN';
-    const tenantIdToFilter = isSuperAdmin ? null : (req.user.tenantId || 1);
+    const tenantIdToFilter = resolveTenantId(req);
 
     const deletedInvoice = await invoiceService.deleteInvoice(Number(req.params.id), tenantIdToFilter, req.user.id);
     sendResponse(res, 200, 'Invoice deleted successfully', deletedInvoice);

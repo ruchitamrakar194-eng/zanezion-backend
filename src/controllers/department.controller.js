@@ -1,6 +1,7 @@
 import * as departmentService from '../services/department.service.js';
 import { sendResponse } from '../utils/response.js';
 
+import { resolveTenantId } from '../utils/tenantResolver.js';
 export const createDepartment = async (req, res, next) => {
   try {
     const department = await departmentService.createDepartment(req.body, req.user.id, req.user.tenantId);
@@ -12,8 +13,7 @@ export const createDepartment = async (req, res, next) => {
 
 export const getDepartments = async (req, res, next) => {
   try {
-    const isSuperAdmin = req.user.role?.name === 'SUPER_ADMIN';
-    const tenantIdToFilter = isSuperAdmin && !req.query.tenantId ? null : (req.query.tenantId ? Number(req.query.tenantId) : req.user.tenantId);
+    const tenantIdToFilter = resolveTenantId(req);
 
     const result = await departmentService.getDepartments(tenantIdToFilter, req.query);
     sendResponse(res, 200, 'Departments fetched successfully', result);
@@ -24,8 +24,7 @@ export const getDepartments = async (req, res, next) => {
 
 export const getDepartmentById = async (req, res, next) => {
   try {
-    const isSuperAdmin = req.user.role?.name === 'SUPER_ADMIN';
-    const tenantIdToFilter = isSuperAdmin ? null : (req.user.tenantId || 1);
+    const tenantIdToFilter = resolveTenantId(req);
 
     const department = await departmentService.getDepartmentById(Number(req.params.id), tenantIdToFilter);
     sendResponse(res, 200, 'Department fetched successfully', department);
@@ -36,8 +35,7 @@ export const getDepartmentById = async (req, res, next) => {
 
 export const updateDepartment = async (req, res, next) => {
   try {
-    const isSuperAdmin = req.user.role?.name === 'SUPER_ADMIN';
-    const tenantIdToFilter = isSuperAdmin ? null : (req.user.tenantId || 1);
+    const tenantIdToFilter = resolveTenantId(req);
 
     const updatedDepartment = await departmentService.updateDepartment(Number(req.params.id), req.body, tenantIdToFilter, req.user.id);
     sendResponse(res, 200, 'Department updated successfully', updatedDepartment);
@@ -48,8 +46,7 @@ export const updateDepartment = async (req, res, next) => {
 
 export const deleteDepartment = async (req, res, next) => {
   try {
-    const isSuperAdmin = req.user.role?.name === 'SUPER_ADMIN';
-    const tenantIdToFilter = isSuperAdmin ? null : (req.user.tenantId || 1);
+    const tenantIdToFilter = resolveTenantId(req);
 
     await departmentService.deleteDepartment(Number(req.params.id), tenantIdToFilter, req.user.id);
     sendResponse(res, 200, 'Department deleted successfully');

@@ -1,6 +1,7 @@
 import * as paymentService from '../services/payment.service.js';
 import { sendResponse } from '../utils/response.js';
 
+import { resolveTenantId } from '../utils/tenantResolver.js';
 export const receivePayment = async (req, res, next) => {
   try {
     const isSuperAdmin = req.user.role?.name === 'SUPER_ADMIN';
@@ -15,8 +16,7 @@ export const receivePayment = async (req, res, next) => {
 
 export const getPayments = async (req, res, next) => {
   try {
-    const isSuperAdmin = req.user.role?.name === 'SUPER_ADMIN';
-    const tenantIdToFilter = isSuperAdmin && !req.query.tenantId ? null : (req.query.tenantId ? Number(req.query.tenantId) : req.user.tenantId);
+    const tenantIdToFilter = resolveTenantId(req);
 
     const result = await paymentService.getPayments(tenantIdToFilter, req.query);
     sendResponse(res, 200, 'Payments fetched successfully', result);
@@ -27,8 +27,7 @@ export const getPayments = async (req, res, next) => {
 
 export const getReceiptById = async (req, res, next) => {
   try {
-    const isSuperAdmin = req.user.role?.name === 'SUPER_ADMIN';
-    const tenantIdToFilter = isSuperAdmin ? null : (req.user.tenantId || 1);
+    const tenantIdToFilter = resolveTenantId(req);
 
     const receipt = await paymentService.getReceiptById(Number(req.params.id), tenantIdToFilter);
     sendResponse(res, 200, 'Receipt fetched successfully', receipt);

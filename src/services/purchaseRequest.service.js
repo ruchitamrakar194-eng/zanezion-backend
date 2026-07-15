@@ -45,7 +45,7 @@ export const createPurchaseRequest = async (data, performerId, tenantId) => {
     description: `[userId:${performerId}] ${data.description || ''}`.trim(),
     departmentId: finalDepartmentId,
     requestedBy: employeeId,
-    status: 'draft',
+    status: data.status ? String(data.status).toLowerCase() : 'draft',
     priority: data.priority || 'medium'
   };
 
@@ -71,8 +71,13 @@ export const createPurchaseRequest = async (data, performerId, tenantId) => {
 };
 
 export const getPurchaseRequests = async (tenantId, query, user) => {
-  // Data Isolation: If the user is STAFF (or similar non-admin), force the query to only return their requests
-  if (user && user.role?.name === 'STAFF') {
+  const roleName = String(user?.role?.name || user?.role || '').toUpperCase();
+  const isClient = roleName.includes('CLIENT') || roleName.includes('CUSTOMER');
+
+  if (isClient) {
+    // Client only sees requests once they are accepted (approved)
+    query.status = 'approved';
+  } else if (user && user.role?.name === 'STAFF') {
     query.requestedBy = await getEmployeeIdByUserId(user.id);
   }
   return await prRepository.findAllPurchaseRequests(tenantId, query);
@@ -104,7 +109,7 @@ export const updatePurchaseRequest = async (id, data, tenantId, performerId) => 
   if (data.departmentId) safePrData.departmentId = Number(data.departmentId);
   if (data.priority) safePrData.priority = data.priority;
   if (data.status) safePrData.status = String(data.status).toLowerCase();
-  
+
   if (data.requester_id) {
     const employeeId = await getEmployeeIdByUserId(Number(data.requester_id));
     safePrData.requestedBy = employeeId;
@@ -161,6 +166,49 @@ export const updatePurchaseRequestStatus = async (id, status, tenantId, performe
   }
 
   const updatedPr = await prRepository.updatePurchaseRequestStatus(id, targetStatusClean);
+
+  if (targetStatusClean === 'approved') {
+    // Check if a PO already exists for this purchase request to avoid duplicates
+    const existingPO = await prisma.purchaseOrder.findFirst({
+      where: { purchaseRequestId: pr.id }
+    });
+    if (!existingPO) {
+      // Find a default vendor for this tenant
+      const defaultVendor = await prisma.vendor.findFirst({
+        where: {
+          OR: [
+            { tenantId: pr.tenantId },
+            { tenantId: 1 }
+          ]
+        }
+      });
+      const vendorId = defaultVendor ? defaultVendor.id : 1;
+
+      // Calculate total amount from purchase request items
+      const prItems = await prisma.purchaseRequestItem.findMany({
+        where: { purchaseRequestId: pr.id }
+      });
+      const totalAmount = prItems.reduce((sum, item) => sum + ((item.estimatedCost || 0) * (item.quantity || 0)), 0);
+
+      // Generate PO number
+      const count = await prisma.purchaseOrder.count({ where: { tenantId: pr.tenantId } });
+      const prefix = 'PO-' + String(pr.tenantId).padStart(3, '0');
+      const poNumber = `${prefix}-${String(count + 1).padStart(5, '0')}`;
+
+      // Create PO automatically for the accepted/approved request
+      await prisma.purchaseOrder.create({
+        data: {
+          tenantId: pr.tenantId,
+          poNumber,
+          vendorId,
+          purchaseRequestId: pr.id,
+          totalAmount,
+          paymentTerms: 'Net 30',
+          status: 'approved'
+        }
+      });
+    }
+  }
 
   await logAudit({
     module: 'PURCHASE_REQUESTS',

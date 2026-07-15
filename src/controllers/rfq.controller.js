@@ -1,6 +1,7 @@
 import * as rfqService from '../services/rfq.service.js';
 import { sendResponse } from '../utils/response.js';
 
+import { resolveTenantId } from '../utils/tenantResolver.js';
 export const createRFQ = async (req, res, next) => {
   try {
     const isSuperAdmin = req.user.role?.name === 'SUPER_ADMIN';
@@ -15,8 +16,7 @@ export const createRFQ = async (req, res, next) => {
 
 export const getRFQs = async (req, res, next) => {
   try {
-    const isSuperAdmin = req.user.role?.name === 'SUPER_ADMIN';
-    const tenantIdToFilter = isSuperAdmin && !req.query.tenantId ? null : (req.query.tenantId ? Number(req.query.tenantId) : req.user.tenantId);
+    const tenantIdToFilter = resolveTenantId(req);
 
     const result = await rfqService.getRFQs(tenantIdToFilter, req.query);
     sendResponse(res, 200, 'RFQs fetched successfully', result);
@@ -27,8 +27,7 @@ export const getRFQs = async (req, res, next) => {
 
 export const getRFQById = async (req, res, next) => {
   try {
-    const isSuperAdmin = req.user.role?.name === 'SUPER_ADMIN';
-    const tenantIdToFilter = isSuperAdmin ? null : (req.user.tenantId || 1);
+    const tenantIdToFilter = resolveTenantId(req);
 
     const rfq = await rfqService.getRFQById(Number(req.params.id), tenantIdToFilter);
     sendResponse(res, 200, 'RFQ fetched successfully', rfq);
@@ -39,8 +38,7 @@ export const getRFQById = async (req, res, next) => {
 
 export const updateRFQStatus = async (req, res, next) => {
   try {
-    const isSuperAdmin = req.user.role?.name === 'SUPER_ADMIN';
-    const tenantIdToFilter = isSuperAdmin ? null : (req.user.tenantId || 1);
+    const tenantIdToFilter = resolveTenantId(req);
     const { status, metadata } = req.body;
 
     const updatedRFQ = await rfqService.updateRFQStatus(Number(req.params.id), status, metadata, tenantIdToFilter, req.user.id);
@@ -52,8 +50,7 @@ export const updateRFQStatus = async (req, res, next) => {
 
 export const deleteRFQ = async (req, res, next) => {
   try {
-    const isSuperAdmin = req.user.role?.name === 'SUPER_ADMIN';
-    const tenantIdToFilter = isSuperAdmin ? null : (req.user.tenantId || 1);
+    const tenantIdToFilter = resolveTenantId(req);
 
     await rfqService.deleteRFQ(Number(req.params.id), tenantIdToFilter, req.user.id);
     sendResponse(res, 200, 'RFQ deleted successfully');

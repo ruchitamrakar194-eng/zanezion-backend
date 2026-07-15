@@ -47,7 +47,7 @@ export const findAllUsersByTenant = async (tenantId, query) => {
       ]
     }),
     ...(roleId && { roleId: Number(roleId) }),
-    ...(roleName && { role: { name: roleName } }),
+    ...(roleName ? { role: { name: roleName } } : { role: { name: { not: 'SUPER_ADMIN' } } }),
     ...(status && { status })
   };
 

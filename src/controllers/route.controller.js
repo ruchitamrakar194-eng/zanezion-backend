@@ -1,6 +1,7 @@
 import * as routeService from '../services/route.service.js';
 import { sendResponse } from '../utils/response.js';
 
+import { resolveTenantId } from '../utils/tenantResolver.js';
 export const createRoute = async (req, res, next) => {
   try {
     const isSuperAdmin = req.user.role?.name === 'SUPER_ADMIN';
@@ -15,8 +16,7 @@ export const createRoute = async (req, res, next) => {
 
 export const getRoutes = async (req, res, next) => {
   try {
-    const isSuperAdmin = req.user.role?.name === 'SUPER_ADMIN';
-    const tenantIdToFilter = isSuperAdmin && !req.query.tenantId ? null : (req.query.tenantId ? Number(req.query.tenantId) : req.user.tenantId);
+    const tenantIdToFilter = resolveTenantId(req);
 
     const result = await routeService.getRoutes(tenantIdToFilter);
     sendResponse(res, 200, 'Routes fetched successfully', result);
@@ -27,8 +27,7 @@ export const getRoutes = async (req, res, next) => {
 
 export const updateRoute = async (req, res, next) => {
   try {
-    const isSuperAdmin = req.user.role?.name === 'SUPER_ADMIN';
-    const tenantIdToFilter = isSuperAdmin ? null : (req.user.tenantId || 1);
+    const tenantIdToFilter = resolveTenantId(req);
 
     const route = await routeService.updateRoute(req.params.id, req.body, tenantIdToFilter, req.user.id);
     sendResponse(res, 200, 'Supply route updated successfully', route);
@@ -39,8 +38,7 @@ export const updateRoute = async (req, res, next) => {
 
 export const deleteRoute = async (req, res, next) => {
   try {
-    const isSuperAdmin = req.user.role?.name === 'SUPER_ADMIN';
-    const tenantIdToFilter = isSuperAdmin ? null : (req.user.tenantId || 1);
+    const tenantIdToFilter = resolveTenantId(req);
 
     await routeService.deleteRoute(req.params.id, tenantIdToFilter, req.user.id);
     sendResponse(res, 200, 'Supply route disabled successfully', null);

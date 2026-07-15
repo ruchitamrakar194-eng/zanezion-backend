@@ -1,12 +1,11 @@
 import * as warehouseService from '../services/warehouse.service.js';
 import { sendResponse } from '../utils/response.js';
 import prisma from '../config/db.js';
+import { resolveTenantId } from '../utils/tenantResolver.js';
 
 export const createWarehouse = async (req, res, next) => {
   try {
-    const isSuperAdmin = req.user.role?.name === 'SUPER_ADMIN';
-    const isBusinessClient = req.user.role?.name === 'BUSINESS_CLIENT';
-    const tenantIdToUse = isSuperAdmin ? (req.body.tenantId || req.user.tenantId || 1) : isBusinessClient ? 1 : (req.user.tenantId || 1);
+    const tenantIdToUse = req.body.tenantId ? Number(req.body.tenantId) : resolveTenantId(req);
 
     const payload = req.body;
 
@@ -26,12 +25,17 @@ export const createWarehouse = async (req, res, next) => {
   }
 };
 
+const checkIsClient = (user) => {
+  const roleName = String(user?.role?.name || user?.role || '').toUpperCase();
+  return roleName.includes('CLIENT') || roleName.includes('CUSTOMER');
+};
+
 export const getWarehouses = async (req, res, next) => {
   try {
     const isSuperAdmin = req.user.role?.name === 'SUPER_ADMIN';
-    const isBusinessClient = req.user.role?.name === 'BUSINESS_CLIENT';
+    const isClient = checkIsClient(req.user);
     const tenantIdToFilter = isSuperAdmin && !req.query.tenantId ? null :
-                             isBusinessClient ? 1 :
+                             isClient ? 1 :
                              (req.query.tenantId ? Number(req.query.tenantId) : req.user.tenantId);
 
     const result = await warehouseService.getWarehouses(tenantIdToFilter, req.query);
@@ -44,8 +48,8 @@ export const getWarehouses = async (req, res, next) => {
 export const getWarehouseById = async (req, res, next) => {
   try {
     const isSuperAdmin = req.user.role?.name === 'SUPER_ADMIN';
-    const isBusinessClient = req.user.role?.name === 'BUSINESS_CLIENT';
-    const tenantIdToFilter = isSuperAdmin ? null : isBusinessClient ? 1 : (req.user.tenantId || 1);
+    const isClient = checkIsClient(req.user);
+    const tenantIdToFilter = isSuperAdmin ? null : isClient ? 1 : (req.user.tenantId || 1);
 
     const warehouse = await warehouseService.getWarehouseById(Number(req.params.id), tenantIdToFilter);
     sendResponse(res, 200, 'Warehouse fetched successfully', warehouse);
@@ -56,9 +60,7 @@ export const getWarehouseById = async (req, res, next) => {
 
 export const updateWarehouse = async (req, res, next) => {
   try {
-    const isSuperAdmin = req.user.role?.name === 'SUPER_ADMIN';
-    const isBusinessClient = req.user.role?.name === 'BUSINESS_CLIENT';
-    const tenantIdToFilter = isSuperAdmin ? null : isBusinessClient ? 1 : (req.user.tenantId || 1);
+    const tenantIdToFilter = resolveTenantId(req);
 
     const payload = req.body;
 
@@ -83,9 +85,7 @@ export const updateWarehouse = async (req, res, next) => {
 
 export const deleteWarehouse = async (req, res, next) => {
   try {
-    const isSuperAdmin = req.user.role?.name === 'SUPER_ADMIN';
-    const isBusinessClient = req.user.role?.name === 'BUSINESS_CLIENT';
-    const tenantIdToFilter = isSuperAdmin ? null : isBusinessClient ? 1 : (req.user.tenantId || 1);
+    const tenantIdToFilter = resolveTenantId(req);
 
     await warehouseService.deleteWarehouse(Number(req.params.id), tenantIdToFilter, req.user.id);
     sendResponse(res, 200, 'Warehouse deleted successfully');

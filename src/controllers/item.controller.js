@@ -2,6 +2,7 @@ import * as itemService from '../services/item.service.js';
 import { sendResponse } from '../utils/response.js';
 import prisma from '../config/db.js';
 
+import { resolveTenantId } from '../utils/tenantResolver.js';
 export const createItem = async (req, res, next) => {
   try {
     const isSuperAdmin = req.user.role?.name === 'SUPER_ADMIN';
@@ -14,12 +15,17 @@ export const createItem = async (req, res, next) => {
   }
 };
 
+const checkIsClient = (user) => {
+  const roleName = String(user?.role?.name || user?.role || '').toUpperCase();
+  return roleName.includes('CLIENT') || roleName.includes('CUSTOMER');
+};
+
 export const getItems = async (req, res, next) => {
   try {
     const isSuperAdmin = req.user.role?.name === 'SUPER_ADMIN';
-    const isBusinessClient = req.user.role?.name === 'BUSINESS_CLIENT' || req.user.role?.name === 'CLIENT';
+    const isClient = checkIsClient(req.user);
     const tenantIdToFilter = isSuperAdmin && !req.query.tenantId ? null :
-                             isBusinessClient ? 1 :
+                             isClient ? 1 :
                              (req.query.tenantId ? Number(req.query.tenantId) : req.user.tenantId);
 
     const result = await itemService.getItems(tenantIdToFilter, req.query);
@@ -32,7 +38,8 @@ export const getItems = async (req, res, next) => {
 export const getItemById = async (req, res, next) => {
   try {
     const isSuperAdmin = req.user.role?.name === 'SUPER_ADMIN';
-    const tenantIdToFilter = isSuperAdmin ? null : (req.user.tenantId || 1);
+    const isClient = checkIsClient(req.user);
+    const tenantIdToFilter = isSuperAdmin ? null : isClient ? 1 : (req.user.tenantId || 1);
 
     const item = await itemService.getItemById(Number(req.params.id), tenantIdToFilter);
     sendResponse(res, 200, 'Item fetched successfully', item);
@@ -43,8 +50,7 @@ export const getItemById = async (req, res, next) => {
 
 export const updateItem = async (req, res, next) => {
   try {
-    const isSuperAdmin = req.user.role?.name === 'SUPER_ADMIN';
-    const tenantIdToFilter = isSuperAdmin ? null : (req.user.tenantId || 1);
+    const tenantIdToFilter = resolveTenantId(req);
 
     const updatedItem = await itemService.updateItem(Number(req.params.id), req.body, tenantIdToFilter, req.user.id);
     sendResponse(res, 200, 'Item updated successfully', updatedItem);
@@ -55,8 +61,7 @@ export const updateItem = async (req, res, next) => {
 
 export const deleteItem = async (req, res, next) => {
   try {
-    const isSuperAdmin = req.user.role?.name === 'SUPER_ADMIN';
-    const tenantIdToFilter = isSuperAdmin ? null : (req.user.tenantId || 1);
+    const tenantIdToFilter = resolveTenantId(req);
 
     await itemService.deleteItem(Number(req.params.id), tenantIdToFilter, req.user.id);
     sendResponse(res, 200, 'Item deleted successfully');
