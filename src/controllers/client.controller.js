@@ -91,7 +91,12 @@ export const getClients = async (req, res, next) => {
 
 export const getClientById = async (req, res, next) => {
   try {
-    const tenantIdToFilter = resolveTenantId(req);
+    let tenantIdToFilter = resolveTenantId(req);
+    const isSuperAdmin = req.user.role?.name === 'SUPER_ADMIN';
+    if (isSuperAdmin) {
+      const checkClient = await prisma.client.findUnique({ where: { id: Number(req.params.id) }, select: { clientType: true } });
+      if (checkClient?.clientType === 'SaaS') tenantIdToFilter = null;
+    }
 
     const client = await clientService.getClientById(Number(req.params.id), tenantIdToFilter);
     sendResponse(res, 200, 'Client fetched successfully', client);
@@ -102,7 +107,12 @@ export const getClientById = async (req, res, next) => {
 
 export const updateClient = async (req, res, next) => {
   try {
-    const tenantIdToFilter = resolveTenantId(req);
+    let tenantIdToFilter = resolveTenantId(req);
+    const isSuperAdmin = req.user.role?.name === 'SUPER_ADMIN';
+    if (isSuperAdmin) {
+      const checkClient = await prisma.client.findUnique({ where: { id: Number(req.params.id) }, select: { clientType: true } });
+      if (checkClient?.clientType === 'SaaS') tenantIdToFilter = null;
+    }
 
     const payload = req.body;
 
@@ -160,7 +170,12 @@ export const updateClient = async (req, res, next) => {
 
 export const deleteClient = async (req, res, next) => {
   try {
-    const tenantIdToFilter = resolveTenantId(req);
+    let tenantIdToFilter = resolveTenantId(req);
+    const isSuperAdmin = req.user.role?.name === 'SUPER_ADMIN';
+    if (isSuperAdmin) {
+      const checkClient = await prisma.client.findUnique({ where: { id: Number(req.params.id) }, select: { clientType: true } });
+      if (checkClient?.clientType === 'SaaS') tenantIdToFilter = null;
+    }
 
     await clientService.deleteClient(Number(req.params.id), tenantIdToFilter, req.user.id);
     sendResponse(res, 200, 'Client deleted successfully');
