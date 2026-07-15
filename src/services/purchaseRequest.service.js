@@ -35,7 +35,7 @@ export const createPurchaseRequest = async (data, performerId, tenantId) => {
     description: `[userId:${performerId}] ${data.description || ''}`.trim(),
     departmentId: finalDepartmentId,
     requestedBy: employeeId,
-    status: 'draft',
+    status: data.status ? String(data.status).toLowerCase() : 'draft',
     priority: data.priority || 'medium'
   };
 
@@ -151,6 +151,49 @@ export const updatePurchaseRequestStatus = async (id, status, tenantId, performe
   }
 
   const updatedPr = await prRepository.updatePurchaseRequestStatus(id, targetStatusClean);
+
+  if (targetStatusClean === 'approved') {
+    // Check if a PO already exists for this purchase request to avoid duplicates
+    const existingPO = await prisma.purchaseOrder.findFirst({
+      where: { purchaseRequestId: pr.id }
+    });
+    if (!existingPO) {
+      // Find a default vendor for this tenant
+      const defaultVendor = await prisma.vendor.findFirst({
+        where: {
+          OR: [
+            { tenantId: pr.tenantId },
+            { tenantId: 1 }
+          ]
+        }
+      });
+      const vendorId = defaultVendor ? defaultVendor.id : 1;
+
+      // Calculate total amount from purchase request items
+      const prItems = await prisma.purchaseRequestItem.findMany({
+        where: { purchaseRequestId: pr.id }
+      });
+      const totalAmount = prItems.reduce((sum, item) => sum + ((item.estimatedCost || 0) * (item.quantity || 0)), 0);
+
+      // Generate PO number
+      const count = await prisma.purchaseOrder.count({ where: { tenantId: pr.tenantId } });
+      const prefix = 'PO-' + String(pr.tenantId).padStart(3, '0');
+      const poNumber = `${prefix}-${String(count + 1).padStart(5, '0')}`;
+
+      // Create PO automatically for the accepted/approved request
+      await prisma.purchaseOrder.create({
+        data: {
+          tenantId: pr.tenantId,
+          poNumber,
+          vendorId,
+          purchaseRequestId: pr.id,
+          totalAmount,
+          paymentTerms: 'Net 30',
+          status: 'approved'
+        }
+      });
+    }
+  }
 
   await logAudit({
     module: 'PURCHASE_REQUESTS',
