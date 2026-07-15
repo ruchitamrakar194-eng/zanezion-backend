@@ -3,7 +3,7 @@ import * as userService from '../services/user.service.js';
 import { sendResponse } from '../utils/response.js';
 import prisma from '../config/db.js';
 import bcrypt from 'bcrypt';
-import { resolveTenantId } from '../utils/tenantResolver.js';
+import { resolveTenantId, resolveTenantIdForSaasManagement } from '../utils/tenantResolver.js';
 
 export const createClient = async (req, res, next) => {
   try {
@@ -70,7 +70,13 @@ export const createClient = async (req, res, next) => {
 
 export const getClients = async (req, res, next) => {
   try {
-    const tenantIdToFilter = resolveTenantId(req);
+    // For SaaS Clients tab: Super Admin needs to see ALL SaaS clients across tenants
+    // For Normal Clients tab: Super Admin sees only HQ (tenantId=1) clients
+    const isSuperAdmin = req.user.role?.name === 'SUPER_ADMIN';
+    const isSaaSFilter = req.query.clientType === 'SaaS';
+    const tenantIdToFilter = (isSuperAdmin && isSaaSFilter)
+      ? resolveTenantIdForSaasManagement(req)  // null = see all tenants
+      : resolveTenantId(req);                   // tenantId=1 for Super Admin
 
     if (['INDIVIDUAL_CLIENT'].includes(req.user.role?.name)) {
       req.query.id = req.user.clientId;
