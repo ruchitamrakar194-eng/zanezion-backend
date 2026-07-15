@@ -104,7 +104,7 @@ export const updatePurchaseRequest = async (id, data, tenantId, performerId) => 
   if (data.departmentId) safePrData.departmentId = Number(data.departmentId);
   if (data.priority) safePrData.priority = data.priority;
   if (data.status) safePrData.status = String(data.status).toLowerCase();
-  
+
   if (data.requester_id) {
     const employeeId = await getEmployeeIdByUserId(Number(data.requester_id));
     safePrData.requestedBy = employeeId;

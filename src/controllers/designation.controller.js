@@ -1,6 +1,7 @@
 import * as designationService from '../services/designation.service.js';
 import { sendResponse } from '../utils/response.js';
 
+import { resolveTenantId } from '../utils/tenantResolver.js';
 export const createDesignation = async (req, res, next) => {
   try {
     const designation = await designationService.createDesignation(req.body, req.user.id, req.user.tenantId);
@@ -12,8 +13,7 @@ export const createDesignation = async (req, res, next) => {
 
 export const getDesignations = async (req, res, next) => {
   try {
-    const isSuperAdmin = req.user.role?.name === 'SUPER_ADMIN';
-    const tenantIdToFilter = isSuperAdmin && !req.query.tenantId ? null : (req.query.tenantId ? Number(req.query.tenantId) : req.user.tenantId);
+    const tenantIdToFilter = resolveTenantId(req);
 
     const result = await designationService.getDesignations(tenantIdToFilter, req.query);
     sendResponse(res, 200, 'Designations fetched successfully', result);
@@ -24,8 +24,7 @@ export const getDesignations = async (req, res, next) => {
 
 export const getDesignationById = async (req, res, next) => {
   try {
-    const isSuperAdmin = req.user.role?.name === 'SUPER_ADMIN';
-    const tenantIdToFilter = isSuperAdmin ? null : (req.user.tenantId || 1);
+    const tenantIdToFilter = resolveTenantId(req);
 
     const designation = await designationService.getDesignationById(Number(req.params.id), tenantIdToFilter);
     sendResponse(res, 200, 'Designation fetched successfully', designation);
@@ -36,8 +35,7 @@ export const getDesignationById = async (req, res, next) => {
 
 export const updateDesignation = async (req, res, next) => {
   try {
-    const isSuperAdmin = req.user.role?.name === 'SUPER_ADMIN';
-    const tenantIdToFilter = isSuperAdmin ? null : (req.user.tenantId || 1);
+    const tenantIdToFilter = resolveTenantId(req);
 
     const updatedDesignation = await designationService.updateDesignation(Number(req.params.id), req.body, tenantIdToFilter, req.user.id);
     sendResponse(res, 200, 'Designation updated successfully', updatedDesignation);
@@ -48,8 +46,7 @@ export const updateDesignation = async (req, res, next) => {
 
 export const deleteDesignation = async (req, res, next) => {
   try {
-    const isSuperAdmin = req.user.role?.name === 'SUPER_ADMIN';
-    const tenantIdToFilter = isSuperAdmin ? null : (req.user.tenantId || 1);
+    const tenantIdToFilter = resolveTenantId(req);
 
     await designationService.deleteDesignation(Number(req.params.id), tenantIdToFilter, req.user.id);
     sendResponse(res, 200, 'Designation deleted successfully');

@@ -1,6 +1,7 @@
 import * as userService from '../services/user.service.js';
 import { sendResponse } from '../utils/response.js';
 import cloudinary from '../config/cloudinary.js';
+import { resolveTenantId } from '../utils/tenantResolver.js';
 
 export const createUser = async (req, res, next) => {
   try {
@@ -43,10 +44,9 @@ export const createUser = async (req, res, next) => {
 
 export const getUsers = async (req, res, next) => {
   try {
-    const isSuperAdmin = req.user.role?.name === 'SUPER_ADMIN';
     const isClient = ['BUSINESS_CLIENT', 'INDIVIDUAL_CLIENT'].includes(req.user.role?.name);
     
-    let tenantIdToFilter = isSuperAdmin ? null : (req.user.tenantId || 1);
+    let tenantIdToFilter = resolveTenantId(req);
 
     if (isClient) {
       tenantIdToFilter = 1;
@@ -61,8 +61,7 @@ export const getUsers = async (req, res, next) => {
 
 export const getCustomers = async (req, res, next) => {
   try {
-    const isSuperAdmin = req.user.role?.name === 'SUPER_ADMIN';
-    const tenantIdToFilter = isSuperAdmin ? null : (req.user.tenantId || 1);
+    const tenantIdToFilter = resolveTenantId(req);
 
     const query = { ...req.query };
     if (!req.query.include_all && !req.query.include_client_role) {
@@ -83,8 +82,7 @@ export const getCustomers = async (req, res, next) => {
 
 export const getUserById = async (req, res, next) => {
   try {
-    const isSuperAdmin = req.user.role?.name === 'SUPER_ADMIN';
-    const tenantIdToFilter = isSuperAdmin ? null : (req.user.tenantId || 1);
+    const tenantIdToFilter = resolveTenantId(req);
 
     const user = await userService.getUserById(Number(req.params.id), tenantIdToFilter);
     sendResponse(res, 200, 'User fetched successfully', user);
@@ -95,8 +93,7 @@ export const getUserById = async (req, res, next) => {
 
 export const updateUser = async (req, res, next) => {
   try {
-    const isSuperAdmin = req.user.role?.name === 'SUPER_ADMIN';
-    const tenantIdToFilter = isSuperAdmin ? null : (req.user.tenantId || 1);
+    const tenantIdToFilter = resolveTenantId(req);
 
     const isCustomer = ['BUSINESS_CLIENT', 'INDIVIDUAL_CLIENT', 'client', 'saas_client', 'customer'].includes(req.user.role?.name);
 
@@ -151,8 +148,7 @@ export const updateUser = async (req, res, next) => {
 
 export const deleteUser = async (req, res, next) => {
   try {
-    const isSuperAdmin = req.user.role?.name === 'SUPER_ADMIN';
-    const tenantIdToFilter = isSuperAdmin ? null : (req.user.tenantId || 1);
+    const tenantIdToFilter = resolveTenantId(req);
 
     await userService.deleteUser(Number(req.params.id), tenantIdToFilter, req.ip, req.headers['user-agent']);
     sendResponse(res, 200, 'User deleted successfully');
@@ -205,8 +201,7 @@ export const uploadDocument = async (req, res, next) => {
     const uploadResult = await uploadStream();
     const secureUrl = uploadResult.secure_url;
 
-    const isSuperAdmin = req.user.role?.name === 'SUPER_ADMIN';
-    const tenantIdToFilter = isSuperAdmin ? null : (req.user.tenantId || 1);
+    const tenantIdToFilter = resolveTenantId(req);
 
     const payload = {
       [docConfig.key]: true,

@@ -3,11 +3,11 @@ import * as userService from '../services/user.service.js';
 import { sendResponse } from '../utils/response.js';
 import prisma from '../config/db.js';
 import bcrypt from 'bcrypt';
+import { resolveTenantId } from '../utils/tenantResolver.js';
 
 export const createClient = async (req, res, next) => {
   try {
-    const isSuperAdmin = req.user.role?.name === 'SUPER_ADMIN';
-    let tenantIdToUse = isSuperAdmin ? (req.body.tenantId || req.user.tenantId || 1) : (req.user.tenantId || 1);
+    let tenantIdToUse = req.body.tenantId ? Number(req.body.tenantId) : resolveTenantId(req);
 
     if (!tenantIdToUse) {
       tenantIdToUse = 1; // Fallback to a default tenant ID if none provided
@@ -70,8 +70,7 @@ export const createClient = async (req, res, next) => {
 
 export const getClients = async (req, res, next) => {
   try {
-    const isSuperAdmin = req.user.role?.name === 'SUPER_ADMIN';
-    const tenantIdToFilter = isSuperAdmin && !req.query.tenantId ? null : (req.query.tenantId ? Number(req.query.tenantId) : req.user.tenantId);
+    const tenantIdToFilter = resolveTenantId(req);
 
     if (['INDIVIDUAL_CLIENT'].includes(req.user.role?.name)) {
       req.query.id = req.user.clientId;
@@ -86,8 +85,7 @@ export const getClients = async (req, res, next) => {
 
 export const getClientById = async (req, res, next) => {
   try {
-    const isSuperAdmin = req.user.role?.name === 'SUPER_ADMIN';
-    const tenantIdToFilter = isSuperAdmin ? null : (req.user.tenantId || 1);
+    const tenantIdToFilter = resolveTenantId(req);
 
     const client = await clientService.getClientById(Number(req.params.id), tenantIdToFilter);
     sendResponse(res, 200, 'Client fetched successfully', client);
@@ -98,8 +96,7 @@ export const getClientById = async (req, res, next) => {
 
 export const updateClient = async (req, res, next) => {
   try {
-    const isSuperAdmin = req.user.role?.name === 'SUPER_ADMIN';
-    const tenantIdToFilter = isSuperAdmin ? null : (req.user.tenantId || 1);
+    const tenantIdToFilter = resolveTenantId(req);
 
     const payload = req.body;
 
@@ -157,8 +154,7 @@ export const updateClient = async (req, res, next) => {
 
 export const deleteClient = async (req, res, next) => {
   try {
-    const isSuperAdmin = req.user.role?.name === 'SUPER_ADMIN';
-    const tenantIdToFilter = isSuperAdmin ? null : (req.user.tenantId || 1);
+    const tenantIdToFilter = resolveTenantId(req);
 
     await clientService.deleteClient(Number(req.params.id), tenantIdToFilter, req.user.id);
     sendResponse(res, 200, 'Client deleted successfully');
@@ -169,8 +165,7 @@ export const deleteClient = async (req, res, next) => {
 
 export const addClientContact = async (req, res, next) => {
   try {
-    const isSuperAdmin = req.user.role?.name === 'SUPER_ADMIN';
-    const tenantIdToUse = isSuperAdmin ? null : req.user.tenantId;
+    const tenantIdToUse = resolveTenantId(req);
 
     const contact = await clientService.addClientContact(Number(req.params.id), req.body, req.user.id, tenantIdToUse);
     sendResponse(res, 201, 'Client contact added successfully', contact);
@@ -181,8 +176,7 @@ export const addClientContact = async (req, res, next) => {
 
 export const removeClientContact = async (req, res, next) => {
   try {
-    const isSuperAdmin = req.user.role?.name === 'SUPER_ADMIN';
-    const tenantIdToUse = isSuperAdmin ? null : req.user.tenantId;
+    const tenantIdToUse = resolveTenantId(req);
 
     await clientService.removeClientContact(Number(req.params.id), Number(req.params.contactId), req.user.id, tenantIdToUse);
     sendResponse(res, 200, 'Client contact removed successfully');

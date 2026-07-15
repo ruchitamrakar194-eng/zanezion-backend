@@ -3,6 +3,8 @@ import * as userService from '../services/user.service.js';
 import prisma from '../config/db.js';
 import { sendResponse } from '../utils/response.js';
 
+import { resolveTenantId, resolveTenantIdForSaasManagement } from '../utils/tenantResolver.js';
+
 export const submitSaaSRequest = async (req, res, next) => {
   try {
     const payload = req.body;
@@ -36,8 +38,7 @@ export const submitSaaSRequest = async (req, res, next) => {
 
 export const provisionSaaSRequest = async (req, res, next) => {
   try {
-    const isSuperAdmin = req.user.role?.name === 'SUPER_ADMIN';
-    const tenantIdToFilter = isSuperAdmin ? null : (req.user.tenantId || 1);
+    const tenantIdToFilter = resolveTenantId(req);
 
     const clientId = Number(req.params.id);
     const client = await clientService.getClientById(clientId, tenantIdToFilter);
@@ -99,8 +100,7 @@ export const provisionSaaSRequest = async (req, res, next) => {
 
 export const getSaaSRequests = async (req, res, next) => {
   try {
-    const isSuperAdmin = req.user.role?.name === 'SUPER_ADMIN';
-    const tenantIdToFilter = isSuperAdmin && !req.query.tenantId ? null : (req.query.tenantId ? Number(req.query.tenantId) : req.user.tenantId);
+    const tenantIdToFilter = resolveTenantIdForSaasManagement(req);
 
     // Get all clients that are SaaS and Pending
     const query = {
