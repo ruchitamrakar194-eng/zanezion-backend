@@ -133,14 +133,33 @@ export const getOrderById = async (id, tenantId) => {
   return order;
 };
 
-export const updateOrderStatus = async (id, status, tenantId, performerId) => {
+export const updateOrderStatus = async (id, status, tenantId, performerId, remarks) => {
   const order = await getOrderById(id, tenantId);
 
   if (order.status === 'cancelled') {
     throw new AppError('Cannot update a cancelled order', 400);
   }
 
-  // Removed strict validTransitions check to allow flexible workflow statuses (e.g. admin_review, concierge) from GlobalDataContext
+  // --- Build workflow history entry ---
+  const currentMeta = typeof order.metadata === 'string'
+    ? JSON.parse(order.metadata)
+    : (order.metadata || {});
+
+  const existingHistory = Array.isArray(currentMeta.workflowHistory) ? currentMeta.workflowHistory : [];
+
+  const historyEntry = {
+    department: String(status).toLowerCase(),
+    previousDepartment: String(order.status || '').toLowerCase(),
+    movedBy: performerId,
+    movedAt: new Date().toISOString(),
+    ...(remarks ? { remarks } : {})
+  };
+
+  const newMetadata = {
+    ...currentMeta,
+    currentDepartment: String(status).toLowerCase(),
+    workflowHistory: [...existingHistory, historyEntry]
+  };
 
   let updatedOrder;
 
@@ -155,19 +174,22 @@ export const updateOrderStatus = async (id, status, tenantId, performerId) => {
       await releaseReservedStock(tx, order.items);
     }
 
-    // Update the actual order status
+    // Update order status + persist new metadata with workflow history
     updatedOrder = await tx.order.update({
       where: { id },
-      data: { status }
+      data: {
+        status,
+        metadata: newMetadata
+      }
     });
   });
 
   await logAudit({
     module: 'ORDERS',
     action: 'STATUS_CHANGE',
-    description: `Order ${order.orderNumber} status changed to ${status}`,
-    oldValue: order,
-    newValue: updatedOrder,
+    description: `Order ${order.orderNumber} forwarded from ${order.status} → ${status}`,
+    oldValue: { status: order.status },
+    newValue: { status, workflowEntry: historyEntry },
     performedBy: performerId
   });
 
@@ -179,6 +201,7 @@ export const updateOrderStatus = async (id, status, tenantId, performerId) => {
     ...metadataObj
   };
 };
+
 
 export const updateOrder = async (id, data, tenantId, performerId) => {
   const order = await getOrderById(id, tenantId);

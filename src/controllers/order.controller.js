@@ -118,15 +118,54 @@ export const getOrderById = async (req, res, next) => {
 
 export const updateOrderStatus = async (req, res, next) => {
   try {
-    const { status } = req.body;
+    const { status, remarks } = req.body;
     const tenantIdToFilter = resolveTenantId(req);
 
-    const updatedOrder = await orderService.updateOrderStatus(Number(req.params.id), status, tenantIdToFilter, req.user.id);
+    const updatedOrder = await orderService.updateOrderStatus(
+      Number(req.params.id),
+      status,
+      tenantIdToFilter,
+      req.user.id,
+      remarks || null
+    );
     sendResponse(res, 200, 'Order status updated successfully', updatedOrder);
   } catch (error) {
     next(error);
   }
 };
+
+export const getOrderTimeline = async (req, res, next) => {
+  try {
+    const tenantIdToFilter = resolveTenantId(req);
+    const order = await orderService.getOrderById(Number(req.params.id), tenantIdToFilter);
+
+    const meta = typeof order.metadata === 'string' ? JSON.parse(order.metadata) : (order.metadata || {});
+    const history = Array.isArray(meta.workflowHistory) ? meta.workflowHistory : [];
+
+    // Enrich each entry with the mover's name by looking up userId
+    const enriched = await Promise.all(history.map(async (entry) => {
+      let moverName = `User #${entry.movedBy}`;
+      try {
+        const user = await prisma.user.findUnique({
+          where: { id: Number(entry.movedBy) },
+          select: { firstName: true, lastName: true, email: true }
+        });
+        if (user) moverName = `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.email;
+      } catch (_) {}
+      return { ...entry, moverName };
+    }));
+
+    sendResponse(res, 200, 'Order timeline fetched', {
+      orderId: order.id,
+      orderNumber: order.orderNumber,
+      currentDepartment: meta.currentDepartment || order.status,
+      timeline: enriched
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 
 export const updateOrder = async (req, res, next) => {
   try {

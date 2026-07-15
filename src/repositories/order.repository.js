@@ -104,7 +104,7 @@ export const findOrderById = async (id) => {
 };
 
 export const findAllOrders = async (tenantId, query) => {
-  const { page = 1, limit = 10, search = '', status, clientId, orderType } = query;
+  const { page = 1, limit = 10, search = '', status, clientId, orderType, currentDept, passedThrough } = query;
   const skip = (page - 1) * limit;
 
   const where = {
@@ -115,21 +115,23 @@ export const findAllOrders = async (tenantId, query) => {
     ...(orderType && { orderType })
   };
 
-  const [orders, total] = await Promise.all([
-    prisma.order.findMany({
-      where,
-      skip: Number(skip),
-      take: Number(limit),
-      orderBy: { createdAt: 'desc' },
-      include: {
-        items: { include: { item: true } },
-        client: { select: { companyName: true, clientCode: true } }
-      }
-    }),
-    prisma.order.count({ where })
-  ]);
+  // currentDept: orders currently in this department (metadata.currentDepartment)
+  // passedThrough: orders that previously passed through this department (in workflowHistory)
+  // These are applied post-query since they depend on JSON fields
+  let applyCurrentDeptFilter = currentDept ? String(currentDept).toLowerCase() : null;
+  let applyPassedThroughFilter = passedThrough ? String(passedThrough).toLowerCase() : null;
 
-  const mappedOrders = orders.map(o => {
+  // Fetch all matching orders first (we post-filter JSON metadata fields)
+  const allOrders = await prisma.order.findMany({
+    where,
+    orderBy: { createdAt: 'desc' },
+    include: {
+      items: { include: { item: true } },
+      client: { select: { companyName: true, clientCode: true } }
+    }
+  });
+
+  let mappedOrders = allOrders.map(o => {
     const { metadata, ...rest } = o;
     const metadataObj = typeof metadata === 'string' ? JSON.parse(metadata) : (metadata || {});
     return {
@@ -139,13 +141,33 @@ export const findAllOrders = async (tenantId, query) => {
     };
   });
 
-  return { orders: mappedOrders, total, page: Number(page), totalPages: Math.ceil(total / limit) };
+  // Post-filter by department (JSON metadata fields)
+  if (applyCurrentDeptFilter) {
+    mappedOrders = mappedOrders.filter(o =>
+      String(o.metadata?.currentDepartment || o.status || '').toLowerCase() === applyCurrentDeptFilter
+    );
+  }
+  if (applyPassedThroughFilter) {
+    mappedOrders = mappedOrders.filter(o => {
+      const history = Array.isArray(o.metadata?.workflowHistory) ? o.metadata.workflowHistory : [];
+      return history.some(h => String(h.department || '').toLowerCase() === applyPassedThroughFilter);
+    });
+  }
+
+  // Paginate after filtering
+  const total = mappedOrders.length;
+  const paginated = mappedOrders.slice((Number(page) - 1) * Number(limit), (Number(page) - 1) * Number(limit) + Number(limit));
+
+  return { orders: paginated, total, page: Number(page), totalPages: Math.ceil(total / Number(limit)) };
 };
 
-export const updateOrderStatus = async (id, status) => {
+export const updateOrderStatus = async (id, status, newMetadata) => {
   const updatedOrder = await prisma.order.update({
     where: { id },
-    data: { status }
+    data: {
+      status,
+      ...(newMetadata !== undefined && { metadata: newMetadata })
+    }
   });
   if (!updatedOrder) return null;
   const { metadata, ...rest } = updatedOrder;
