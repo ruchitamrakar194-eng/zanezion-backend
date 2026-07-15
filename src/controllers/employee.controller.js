@@ -1,6 +1,7 @@
 import * as employeeService from '../services/employee.service.js';
 import { sendResponse } from '../utils/response.js';
 
+import { resolveTenantId } from '../utils/tenantResolver.js';
 export const createEmployee = async (req, res, next) => {
   try {
     const employee = await employeeService.createEmployee(req.body, req.user.id, req.user.tenantId);
@@ -12,8 +13,7 @@ export const createEmployee = async (req, res, next) => {
 
 export const getEmployees = async (req, res, next) => {
   try {
-    const isSuperAdmin = req.user.role?.name === 'SUPER_ADMIN';
-    const tenantIdToFilter = isSuperAdmin && !req.query.tenantId ? null : (req.query.tenantId ? Number(req.query.tenantId) : req.user.tenantId);
+    const tenantIdToFilter = resolveTenantId(req);
 
     const result = await employeeService.getEmployees(tenantIdToFilter, req.query);
     sendResponse(res, 200, 'Employees fetched successfully', result);
@@ -24,8 +24,7 @@ export const getEmployees = async (req, res, next) => {
 
 export const getEmployeeById = async (req, res, next) => {
   try {
-    const isSuperAdmin = req.user.role?.name === 'SUPER_ADMIN';
-    const tenantIdToFilter = isSuperAdmin ? null : (req.user.tenantId || 1);
+    const tenantIdToFilter = resolveTenantId(req);
 
     const employee = await employeeService.getEmployeeById(Number(req.params.id), tenantIdToFilter);
     sendResponse(res, 200, 'Employee fetched successfully', employee);
@@ -36,8 +35,7 @@ export const getEmployeeById = async (req, res, next) => {
 
 export const updateEmployee = async (req, res, next) => {
   try {
-    const isSuperAdmin = req.user.role?.name === 'SUPER_ADMIN';
-    const tenantIdToFilter = isSuperAdmin ? null : (req.user.tenantId || 1);
+    const tenantIdToFilter = resolveTenantId(req);
 
     const updatedEmployee = await employeeService.updateEmployee(Number(req.params.id), req.body, tenantIdToFilter, req.user.id);
     sendResponse(res, 200, 'Employee updated successfully', updatedEmployee);
@@ -48,8 +46,7 @@ export const updateEmployee = async (req, res, next) => {
 
 export const deleteEmployee = async (req, res, next) => {
   try {
-    const isSuperAdmin = req.user.role?.name === 'SUPER_ADMIN';
-    const tenantIdToFilter = isSuperAdmin ? null : (req.user.tenantId || 1);
+    const tenantIdToFilter = resolveTenantId(req);
 
     await employeeService.deleteEmployee(Number(req.params.id), tenantIdToFilter, req.user.id);
     sendResponse(res, 200, 'Employee deleted successfully');

@@ -1,5 +1,6 @@
 import { PrismaClient } from '@prisma/client';
 import { sendResponse } from '../utils/response.js';
+import { resolveTenantId } from '../utils/tenantResolver.js';
 
 const prisma = new PrismaClient();
 
@@ -73,8 +74,8 @@ function buildRevenueChartData(paidInvoices, revenueFilter) {
 
 export const getDashboardStats = async (req, res, next) => {
   try {
-    const tenantId = req.user?.tenantId;
-    const filter = tenantId ? { tenantId } : {};
+    const tenantId = resolveTenantId(req);
+    const filter = { tenantId };
 
     const revenueFilter = req.query.revenueFilter || 'Monthly';
     const filterDays = { 'Daily': 1, 'Weekly': 7, 'Monthly': 30, 'Quarterly': 90, 'Annual': 365 };
@@ -85,8 +86,7 @@ export const getDashboardStats = async (req, res, next) => {
     const prevThresholdDate = new Date(thresholdDate.getTime() - (days * 24 * 60 * 60 * 1000));
     const last24h = new Date(now.getTime() - 24 * 60 * 60 * 1000);
 
-    const isBusinessClient = req.user?.role?.name === 'BUSINESS_CLIENT';
-    const masterFilter = (tenantId && !isBusinessClient) ? { tenantId } : { tenantId: 1 };
+    const masterFilter = { tenantId };
 
     const [
       activeClients,

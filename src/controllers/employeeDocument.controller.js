@@ -1,6 +1,7 @@
 import * as documentService from '../services/employeeDocument.service.js';
 import { sendResponse } from '../utils/response.js';
 
+import { resolveTenantId } from '../utils/tenantResolver.js';
 export const createDocument = async (req, res, next) => {
   try {
     const document = await documentService.createDocument(req.body, req.user.id, req.user.tenantId);
@@ -12,8 +13,7 @@ export const createDocument = async (req, res, next) => {
 
 export const getDocuments = async (req, res, next) => {
   try {
-    const isSuperAdmin = req.user.role?.name === 'SUPER_ADMIN';
-    const tenantIdToFilter = isSuperAdmin && !req.query.tenantId ? null : (req.query.tenantId ? Number(req.query.tenantId) : req.user.tenantId);
+    const tenantIdToFilter = resolveTenantId(req);
 
     const result = await documentService.getDocuments(tenantIdToFilter, req.query);
     sendResponse(res, 200, 'Documents fetched successfully', result);
@@ -24,8 +24,7 @@ export const getDocuments = async (req, res, next) => {
 
 export const getDocumentById = async (req, res, next) => {
   try {
-    const isSuperAdmin = req.user.role?.name === 'SUPER_ADMIN';
-    const tenantIdToFilter = isSuperAdmin ? null : (req.user.tenantId || 1);
+    const tenantIdToFilter = resolveTenantId(req);
 
     const document = await documentService.getDocumentById(Number(req.params.id), tenantIdToFilter);
     sendResponse(res, 200, 'Document fetched successfully', document);
@@ -36,8 +35,7 @@ export const getDocumentById = async (req, res, next) => {
 
 export const updateDocument = async (req, res, next) => {
   try {
-    const isSuperAdmin = req.user.role?.name === 'SUPER_ADMIN';
-    const tenantIdToFilter = isSuperAdmin ? null : (req.user.tenantId || 1);
+    const tenantIdToFilter = resolveTenantId(req);
 
     const updatedDocument = await documentService.updateDocument(Number(req.params.id), req.body, tenantIdToFilter, req.user.id);
     sendResponse(res, 200, 'Document updated successfully', updatedDocument);
@@ -48,8 +46,7 @@ export const updateDocument = async (req, res, next) => {
 
 export const verifyDocument = async (req, res, next) => {
   try {
-    const isSuperAdmin = req.user.role?.name === 'SUPER_ADMIN';
-    const tenantIdToFilter = isSuperAdmin ? null : (req.user.tenantId || 1);
+    const tenantIdToFilter = resolveTenantId(req);
     const { verificationStatus } = req.body;
 
     const updatedDocument = await documentService.verifyDocument(Number(req.params.id), verificationStatus, tenantIdToFilter, req.user.id);
@@ -61,8 +58,7 @@ export const verifyDocument = async (req, res, next) => {
 
 export const deleteDocument = async (req, res, next) => {
   try {
-    const isSuperAdmin = req.user.role?.name === 'SUPER_ADMIN';
-    const tenantIdToFilter = isSuperAdmin ? null : (req.user.tenantId || 1);
+    const tenantIdToFilter = resolveTenantId(req);
 
     await documentService.deleteDocument(Number(req.params.id), tenantIdToFilter, req.user.id);
     sendResponse(res, 200, 'Document deleted successfully');

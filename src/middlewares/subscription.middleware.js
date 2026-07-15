@@ -28,13 +28,15 @@ export const enforceSubscriptionLimits = async (req, res, next) => {
       return sendResponse(res, 404, 'Tenant not found');
     }
 
-    if (tenant.status !== 'active') {
+    console.log(`[SUBSCRIPTION] Tenant ID: ${tenantId}, Status: "${tenant.status}", Subscription: ${tenant.activeSubscription ? tenant.activeSubscription.status : 'NONE'}`);
+
+    if (String(tenant.status).toLowerCase() !== 'active') {
       return sendResponse(res, 403, 'Tenant account is suspended');
     }
 
     const subscription = tenant.activeSubscription;
 
-    if (!subscription || subscription.status !== 'ACTIVE') {
+    if (!subscription || String(subscription.status).toUpperCase() !== 'ACTIVE') {
       return sendResponse(res, 403, 'No active subscription found. Please upgrade to create users.');
     }
 

@@ -1,14 +1,21 @@
 import * as financeService from '../services/finance.service.js';
 import { sendResponse } from '../utils/response.js';
+import { resolveTenantId } from '../utils/tenantResolver.js';
 
 export const getPayrolls = async (req, res, next) => {
   try {
+<<<<<<< HEAD
     const isSuperAdmin = req.user.role?.name === 'SUPER_ADMIN';
     const isAdmin = req.user.role?.name === 'ADMIN';
     const tenantIdToFilter = isSuperAdmin && !req.query.tenantId ? null : (req.query.tenantId ? Number(req.query.tenantId) : req.user.tenantId);
 
+=======
+    const isAdmin = req.user.role?.name === 'ADMIN' || req.user.role?.name === 'SUPER_ADMIN';
+    const tenantIdToFilter = resolveTenantId(req);
+    
+>>>>>>> 8921c49a6411225fec72c47e06c411250c3a4939
     // Non-admins can only see their own payroll records
-    const filterUserId = (isSuperAdmin || isAdmin) ? null : req.user.id;
+    const filterUserId = isAdmin ? null : req.user.id;
     const payrolls = await financeService.getPayrolls(tenantIdToFilter || 1, filterUserId);
 
     // Transform to match frontend expectations

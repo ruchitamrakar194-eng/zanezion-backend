@@ -1,6 +1,7 @@
 import * as quotationService from '../services/quotation.service.js';
 import { sendResponse } from '../utils/response.js';
 
+import { resolveTenantId } from '../utils/tenantResolver.js';
 export const createQuotation = async (req, res, next) => {
   try {
     const isSuperAdmin = req.user.role?.name === 'SUPER_ADMIN';
@@ -30,8 +31,7 @@ export const createQuotation = async (req, res, next) => {
 
 export const getQuotations = async (req, res, next) => {
   try {
-    const isSuperAdmin = req.user.role?.name === 'SUPER_ADMIN';
-    const tenantIdToFilter = isSuperAdmin && !req.query.tenantId ? null : (req.query.tenantId ? Number(req.query.tenantId) : req.user.tenantId);
+    const tenantIdToFilter = resolveTenantId(req);
 
     const result = await quotationService.getQuotations(tenantIdToFilter, req.query);
     sendResponse(res, 200, 'Quotations fetched successfully', result);
@@ -42,8 +42,7 @@ export const getQuotations = async (req, res, next) => {
 
 export const getQuotationById = async (req, res, next) => {
   try {
-    const isSuperAdmin = req.user.role?.name === 'SUPER_ADMIN';
-    const tenantIdToFilter = isSuperAdmin ? null : (req.user.tenantId || 1);
+    const tenantIdToFilter = resolveTenantId(req);
 
     const quotation = await quotationService.getQuotationById(Number(req.params.id), tenantIdToFilter);
     sendResponse(res, 200, 'Quotation fetched successfully', quotation);
@@ -54,8 +53,7 @@ export const getQuotationById = async (req, res, next) => {
 
 export const updateQuotationStatus = async (req, res, next) => {
   try {
-    const isSuperAdmin = req.user.role?.name === 'SUPER_ADMIN';
-    const tenantIdToFilter = isSuperAdmin ? null : (req.user.tenantId || 1);
+    const tenantIdToFilter = resolveTenantId(req);
     const { status } = req.body;
 
     const updatedQuotation = await quotationService.updateQuotationStatus(Number(req.params.id), status, tenantIdToFilter, req.user.id);
@@ -67,8 +65,7 @@ export const updateQuotationStatus = async (req, res, next) => {
 
 export const deleteQuotation = async (req, res, next) => {
   try {
-    const isSuperAdmin = req.user.role?.name === 'SUPER_ADMIN';
-    const tenantIdToFilter = isSuperAdmin ? null : (req.user.tenantId || 1);
+    const tenantIdToFilter = resolveTenantId(req);
 
     await quotationService.deleteQuotation(Number(req.params.id), tenantIdToFilter, req.user.id);
     sendResponse(res, 200, 'Quotation deleted successfully');

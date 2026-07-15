@@ -2,6 +2,7 @@ import * as inventoryService from '../services/inventory.service.js';
 import { sendResponse } from '../utils/response.js';
 import prisma from '../config/db.js';
 
+import { resolveTenantId } from '../utils/tenantResolver.js';
 export const issueStock = async (req, res, next) => {
   try {
     const isSuperAdmin = req.user.role?.name === 'SUPER_ADMIN';
@@ -30,8 +31,7 @@ export const recordLoss = async (req, res, next) => {
 
 export const getLossAssessments = async (req, res, next) => {
   try {
-    const isSuperAdmin = req.user.role?.name === 'SUPER_ADMIN';
-    const tenantIdToFilter = isSuperAdmin && !req.query.tenantId ? null : (req.query.tenantId ? Number(req.query.tenantId) : req.user.tenantId);
+    const tenantIdToFilter = resolveTenantId(req);
 
     const result = await inventoryService.getLossAssessments(tenantIdToFilter, req.query);
     sendResponse(res, 200, 'Strategic loss assessments fetched successfully', result);
@@ -47,9 +47,13 @@ const checkIsClient = (user) => {
 
 export const getInventory = async (req, res, next) => {
   try {
+<<<<<<< HEAD
     const isSuperAdmin = req.user.role?.name === 'SUPER_ADMIN';
     const isClient = checkIsClient(req.user);
     const tenantId = isSuperAdmin ? null : isClient ? 1 : (req.user.tenantId || 1);
+=======
+    const tenantId = resolveTenantId(req);
+>>>>>>> 8921c49a6411225fec72c47e06c411250c3a4939
 
     const items = await prisma.item.findMany({
       where: {

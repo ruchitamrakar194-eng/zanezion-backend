@@ -1,6 +1,7 @@
 import * as vendorService from '../services/vendor.service.js';
 import { sendResponse } from '../utils/response.js';
 import AppError from '../utils/AppError.js';
+import { resolveTenantId } from '../utils/tenantResolver.js';
 
 export const createVendor = async (req, res, next) => {
   try {
@@ -40,11 +41,15 @@ const checkIsClient = (user) => {
 
 export const getVendors = async (req, res, next) => {
   try {
+<<<<<<< HEAD
     const isSuperAdmin = req.user.role?.name === 'SUPER_ADMIN';
     const isClient = checkIsClient(req.user);
     const tenantIdToFilter = isSuperAdmin && !req.query.tenantId ? null :
                              isClient ? 1 :
                              (req.query.tenantId ? Number(req.query.tenantId) : req.user.tenantId);
+=======
+    const tenantIdToFilter = resolveTenantId(req);
+>>>>>>> 8921c49a6411225fec72c47e06c411250c3a4939
 
     const result = await vendorService.getVendors(tenantIdToFilter, req.query);
     sendResponse(res, 200, 'Vendors fetched successfully', result);
@@ -55,9 +60,13 @@ export const getVendors = async (req, res, next) => {
 
 export const getVendorById = async (req, res, next) => {
   try {
+<<<<<<< HEAD
     const isSuperAdmin = req.user.role?.name === 'SUPER_ADMIN';
     const isClient = checkIsClient(req.user);
     const tenantIdToFilter = isSuperAdmin ? null : isClient ? 1 : (req.user.tenantId || 1);
+=======
+    const tenantIdToFilter = resolveTenantId(req);
+>>>>>>> 8921c49a6411225fec72c47e06c411250c3a4939
 
     const vendor = await vendorService.getVendorById(Number(req.params.id), tenantIdToFilter);
     sendResponse(res, 200, 'Vendor fetched successfully', vendor);
@@ -68,8 +77,7 @@ export const getVendorById = async (req, res, next) => {
 
 export const updateVendor = async (req, res, next) => {
   try {
-    const isSuperAdmin = req.user.role?.name === 'SUPER_ADMIN';
-    const tenantIdToFilter = isSuperAdmin ? null : (req.user.tenantId || 1);
+    const tenantIdToFilter = resolveTenantId(req);
 
     const payload = req.body;
     const vendorData = {};
@@ -102,8 +110,7 @@ export const updateVendor = async (req, res, next) => {
 
 export const deleteVendor = async (req, res, next) => {
   try {
-    const isSuperAdmin = req.user.role?.name === 'SUPER_ADMIN';
-    const tenantIdToFilter = isSuperAdmin ? null : (req.user.tenantId || 1);
+    const tenantIdToFilter = resolveTenantId(req);
 
     await vendorService.deleteVendor(Number(req.params.id), tenantIdToFilter, req.user.id);
     sendResponse(res, 200, 'Vendor deleted successfully');

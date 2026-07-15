@@ -1,6 +1,7 @@
 import * as missionService from '../services/mission.service.js';
 import { sendResponse } from '../utils/response.js';
 
+import { resolveTenantId } from '../utils/tenantResolver.js';
 export const createMission = async (req, res, next) => {
   try {
     const isSuperAdmin = req.user.role?.name === 'SUPER_ADMIN';
@@ -30,8 +31,7 @@ export const createMission = async (req, res, next) => {
 
 export const getMissions = async (req, res, next) => {
   try {
-    const isSuperAdmin = req.user.role?.name === 'SUPER_ADMIN';
-    const tenantIdToFilter = isSuperAdmin && !req.query.tenantId ? null : (req.query.tenantId ? Number(req.query.tenantId) : req.user.tenantId);
+    const tenantIdToFilter = resolveTenantId(req);
 
     const result = await missionService.getMissions(tenantIdToFilter, req.query);
     sendResponse(res, 200, 'Missions fetched successfully', result);
@@ -42,8 +42,7 @@ export const getMissions = async (req, res, next) => {
 
 export const getMissionById = async (req, res, next) => {
   try {
-    const isSuperAdmin = req.user.role?.name === 'SUPER_ADMIN';
-    const tenantIdToFilter = isSuperAdmin ? null : (req.user.tenantId || 1);
+    const tenantIdToFilter = resolveTenantId(req);
 
     const mission = await missionService.getMissionById(req.params.id, tenantIdToFilter);
     sendResponse(res, 200, 'Mission fetched successfully', mission);
@@ -54,8 +53,7 @@ export const getMissionById = async (req, res, next) => {
 
 export const startMission = async (req, res, next) => {
   try {
-    const isSuperAdmin = req.user.role?.name === 'SUPER_ADMIN';
-    const tenantIdToFilter = isSuperAdmin ? null : (req.user.tenantId || 1);
+    const tenantIdToFilter = resolveTenantId(req);
 
     await missionService.startMission(req.params.id, tenantIdToFilter, req.user.id);
     sendResponse(res, 200, 'Mission started and delivery dispatched successfully');
@@ -66,8 +64,7 @@ export const startMission = async (req, res, next) => {
 
 export const submitPOD = async (req, res, next) => {
   try {
-    const isSuperAdmin = req.user.role?.name === 'SUPER_ADMIN';
-    const tenantIdToFilter = isSuperAdmin ? null : (req.user.tenantId || 1);
+    const tenantIdToFilter = resolveTenantId(req);
 
     await missionService.submitPOD(req.params.id, req.body, tenantIdToFilter, req.user.id);
     sendResponse(res, 200, 'Proof of Delivery submitted and mission completed successfully');
@@ -78,8 +75,7 @@ export const submitPOD = async (req, res, next) => {
 
 export const convertProjectToMission = async (req, res, next) => {
   try {
-    const isSuperAdmin = req.user.role?.name === 'SUPER_ADMIN';
-    const tenantIdToFilter = isSuperAdmin ? null : (req.user.tenantId || 1);
+    const tenantIdToFilter = resolveTenantId(req);
     const projectId = Number(req.params.projectId);
 
     const mission = await missionService.convertProjectToMission(projectId, req.body, tenantIdToFilter, req.user.id);
@@ -91,8 +87,7 @@ export const convertProjectToMission = async (req, res, next) => {
 
 export const convertOrderToMission = async (req, res, next) => {
   try {
-    const isSuperAdmin = req.user.role?.name === 'SUPER_ADMIN';
-    const tenantIdToFilter = isSuperAdmin ? null : (req.user.tenantId || 1);
+    const tenantIdToFilter = resolveTenantId(req);
     const orderId = Number(req.params.orderId);
 
     const mission = await missionService.convertOrderToMission(orderId, req.body, tenantIdToFilter, req.user.id);
@@ -104,8 +99,7 @@ export const convertOrderToMission = async (req, res, next) => {
 
 export const assignMission = async (req, res, next) => {
   try {
-    const isSuperAdmin = req.user.role?.name === 'SUPER_ADMIN';
-    const tenantIdToFilter = isSuperAdmin ? null : (req.user.tenantId || 1);
+    const tenantIdToFilter = resolveTenantId(req);
     const missionId = req.params.id;
 
     const mission = await missionService.assignMission(missionId, req.body, tenantIdToFilter, req.user.id);
@@ -117,8 +111,7 @@ export const assignMission = async (req, res, next) => {
 
 export const updateMissionStatus = async (req, res, next) => {
   try {
-    const isSuperAdmin = req.user?.role?.name === 'SUPER_ADMIN';
-    const tenantIdToFilter = isSuperAdmin ? null : req.user?.tenantId || null;
+    const tenantIdToFilter = resolveTenantId(req);
     const missionId = req.params.id;
     const { status } = req.body;
 
