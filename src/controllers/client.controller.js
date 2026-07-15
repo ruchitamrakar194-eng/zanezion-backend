@@ -70,11 +70,11 @@ export const createClient = async (req, res, next) => {
 
 export const getClients = async (req, res, next) => {
   try {
-    // For SaaS Clients tab: Super Admin needs to see ALL SaaS clients across tenants
+    // For SaaS/Business Clients: Super Admin needs to see them across tenants
     // For Normal Clients tab: Super Admin sees only HQ (tenantId=1) clients
     const isSuperAdmin = req.user.role?.name === 'SUPER_ADMIN';
-    const isSaaSFilter = req.query.clientType === 'SaaS';
-    const tenantIdToFilter = (isSuperAdmin && isSaaSFilter)
+    const isCrossTenantType = req.query.clientType === 'SaaS' || req.query.clientType === 'Business';
+    const tenantIdToFilter = (isSuperAdmin && isCrossTenantType)
       ? resolveTenantIdForSaasManagement(req)  // null = see all tenants
       : resolveTenantId(req);                   // tenantId=1 for Super Admin
 
@@ -95,7 +95,7 @@ export const getClientById = async (req, res, next) => {
     const isSuperAdmin = req.user.role?.name === 'SUPER_ADMIN';
     if (isSuperAdmin) {
       const checkClient = await prisma.client.findUnique({ where: { id: Number(req.params.id) }, select: { clientType: true } });
-      if (checkClient?.clientType === 'SaaS') tenantIdToFilter = null;
+      if (checkClient?.clientType === 'SaaS' || checkClient?.clientType === 'Business') tenantIdToFilter = null;
     }
 
     const client = await clientService.getClientById(Number(req.params.id), tenantIdToFilter);
@@ -111,7 +111,7 @@ export const updateClient = async (req, res, next) => {
     const isSuperAdmin = req.user.role?.name === 'SUPER_ADMIN';
     if (isSuperAdmin) {
       const checkClient = await prisma.client.findUnique({ where: { id: Number(req.params.id) }, select: { clientType: true } });
-      if (checkClient?.clientType === 'SaaS') tenantIdToFilter = null;
+      if (checkClient?.clientType === 'SaaS' || checkClient?.clientType === 'Business') tenantIdToFilter = null;
     }
 
     const payload = req.body;
@@ -174,7 +174,7 @@ export const deleteClient = async (req, res, next) => {
     const isSuperAdmin = req.user.role?.name === 'SUPER_ADMIN';
     if (isSuperAdmin) {
       const checkClient = await prisma.client.findUnique({ where: { id: Number(req.params.id) }, select: { clientType: true } });
-      if (checkClient?.clientType === 'SaaS') tenantIdToFilter = null;
+      if (checkClient?.clientType === 'SaaS' || checkClient?.clientType === 'Business') tenantIdToFilter = null;
     }
 
     await clientService.deleteClient(Number(req.params.id), tenantIdToFilter, req.user.id);
