@@ -10,11 +10,19 @@ export const createDelivery = async (data, performerId, tenantId) => {
 
   let order;
   if (data.orderId) {
-    order = await orderRepo.findOrderById(Number(data.orderId));
+    const numericOrderId = Number(data.orderId);
+    if (!isNaN(numericOrderId)) {
+      order = await orderRepo.findOrderById(numericOrderId);
+    }
+    
     if (!order) {
       const strId = String(data.orderId);
       if (strId.length >= 8) {
-        const formattedRef = `ORD-${strId.slice(0, 4)}-${strId.slice(4)}`;
+        // Just search directly if it looks like an order number format
+        let formattedRef = strId;
+        if (!strId.startsWith('ORD-') && strId.length === 8) {
+             formattedRef = `ORD-${strId.slice(0, 4)}-${strId.slice(4)}`;
+        }
         order = await prisma.order.findFirst({
           where: {
             orderNumber: formattedRef,
@@ -113,7 +121,10 @@ export const createDelivery = async (data, performerId, tenantId) => {
     }
 
     const validItems = await Promise.all(items.map(async (it) => {
-      const itemExists = it.itemId ? await prisma.item.findUnique({ where: { id: Number(it.itemId) } }) : null;
+      let numericItemId = Number(it.itemId);
+      const itemExists = (!isNaN(numericItemId) && numericItemId > 0) 
+          ? await prisma.item.findUnique({ where: { id: numericItemId } }) 
+          : null;
       const finalItemId = itemExists ? itemExists.id : defaultItem.id;
       it.itemId = finalItemId; // Mutate the original item so the validation loop sees the correct ID
       return {
@@ -183,13 +194,21 @@ export const createDelivery = async (data, performerId, tenantId) => {
   // Validate quantities: Delivery quantity cannot exceed (Order Quantity - Already Delivered Quantity)
   for (let i = 0; i < items.length; i++) {
     const item = items[i];
-    const orderItemId = item.orderItemId;
     let orderItem;
 
-    if (orderItemId) {
-      orderItem = order.items?.find(oi => oi.id == orderItemId);
-    } else {
-      orderItem = order.items?.find(oi => oi.itemId == item.itemId);
+    if (item.orderItemId) {
+      const numericOrderItemId = Number(item.orderItemId);
+      if (!isNaN(numericOrderItemId) && numericOrderItemId > 0) {
+          orderItem = order.items?.find(oi => oi.id == numericOrderItemId);
+      }
+    } 
+    
+    if (!orderItem) {
+      let numericItemId = Number(item.itemId);
+      if (!isNaN(numericItemId) && numericItemId > 0) {
+          orderItem = order.items?.find(oi => oi.itemId == numericItemId);
+      }
+      
       if (!orderItem && order.items && order.items[i]) {
         orderItem = order.items[i];
         item.itemId = orderItem.itemId;
@@ -203,7 +222,6 @@ export const createDelivery = async (data, performerId, tenantId) => {
       continue;
     }
 
-    // Set the resolved orderItemId on the item
     if (!item.orderItemId) {
       item.orderItemId = orderItem.id;
     }
