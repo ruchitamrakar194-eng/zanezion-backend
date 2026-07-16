@@ -27,6 +27,7 @@ export const createWarehouse = async (req, res, next) => {
 
 const checkIsClient = (user) => {
   const roleName = String(user?.role?.name || user?.role || '').toUpperCase();
+  if (roleName === 'SAAS_CLIENT') return false;
   return roleName.includes('CLIENT') || roleName.includes('CUSTOMER');
 };
 

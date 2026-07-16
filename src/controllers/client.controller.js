@@ -82,6 +82,10 @@ export const getClients = async (req, res, next) => {
       req.query.id = req.user.clientId;
     }
 
+    if (req.user.role?.name === 'SAAS_CLIENT') {
+      req.query.clientType = 'Personal';
+    }
+
     const result = await clientService.getClients(tenantIdToFilter, req.query);
     sendResponse(res, 200, 'Clients fetched successfully', result);
   } catch (error) {
