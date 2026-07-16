@@ -161,6 +161,12 @@ export const createDelivery = async (data, performerId, tenantId) => {
     deliveryData.clientId = clientIdToUse;
   }
 
+  if (deliveryData.assigned_driver) {
+    const emp = await prisma.employee.findFirst({ where: { userId: Number(deliveryData.assigned_driver) } });
+    if (emp) deliveryData.assignedTo = emp.id;
+    delete deliveryData.assigned_driver;
+  }
+
   if (!['draft', 'pending', 'approved', 'ready_for_delivery', 'planned', 'active', 'in_progress', 'Pending', 'In Progress', 'operation', 'procurement', 'inventory', 'logistics', 'concierge', 'created', 'admin_review', 'pending_review'].includes(order.status)) {
     throw new AppError(`Cannot create delivery for order in ${order.status} status`, 400);
   }
@@ -357,6 +363,12 @@ export const updateDelivery = async (id, data, tenantId, performerId, clientId =
   delete parsedData.items;
   delete parsedData.deliveryNumber;
   delete parsedData.tenantId;
+
+  if (parsedData.assigned_driver) {
+    const emp = await prisma.employee.findFirst({ where: { userId: Number(parsedData.assigned_driver) } });
+    if (emp) parsedData.assignedTo = emp.id;
+    delete parsedData.assigned_driver;
+  }
 
   if (signature) {
     const existingPOD = await prisma.proofOfDelivery.findFirst({

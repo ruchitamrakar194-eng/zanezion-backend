@@ -23,4 +23,6 @@ export const createDeliverySchema = z.object({
   routeDistance: z.number().optional().nullable(),
   staffPayRate: z.number().optional().nullable(),
   deliveryFee: z.number().optional().nullable(),
+  driver: z.string().optional().nullable(),
+  assigned_driver: z.union([z.number(), z.string()]).optional().nullable(),
 });
