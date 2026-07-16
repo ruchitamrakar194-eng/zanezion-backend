@@ -12,15 +12,6 @@ const prisma = new PrismaClient();
 
 async function startServer() {
   try {
-    // Auto-migrate schema on server startup
-    try {
-      console.log('Running automatic database migrations...');
-      execSync('npx prisma db push --accept-data-loss', { stdio: 'inherit' });
-      console.log('✅ Database migration completed');
-    } catch (migError) {
-      console.error('⚠️ Database migration command failed, attempting connection anyway:', migError.message);
-    }
-
     // Check DB Connection
     await prisma.$connect();
     console.log('✅ Database connected successfully');

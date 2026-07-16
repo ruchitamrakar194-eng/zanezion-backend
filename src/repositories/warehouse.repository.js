@@ -51,5 +51,14 @@ export const updateWarehouse = async (id, data) => {
 };
 
 export const deleteWarehouse = async (id) => {
-  return await prisma.warehouse.delete({ where: { id } });
+  return await prisma.$transaction([
+    prisma.inventoryStock.deleteMany({ where: { warehouseId: id } }),
+    prisma.stockMovement.deleteMany({ where: { warehouseId: id } }),
+    prisma.lossAssessment.deleteMany({ where: { warehouseId: id } }),
+    prisma.gRNItem.deleteMany({ where: { grn: { warehouseId: id } } }),
+    prisma.gRN.deleteMany({ where: { warehouseId: id } }),
+    prisma.deliveryItem.deleteMany({ where: { delivery: { warehouseId: id } } }),
+    prisma.delivery.deleteMany({ where: { warehouseId: id } }),
+    prisma.warehouse.delete({ where: { id } })
+  ]);
 };

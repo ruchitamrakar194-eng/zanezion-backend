@@ -3,7 +3,8 @@ import * as vehicleService from '../services/vehicle.service.js';
 export const getVehicles = async (req, res, next) => {
   try {
     const isBusinessClient = req.user.role?.name === 'BUSINESS_CLIENT';
-    const tenantId = isBusinessClient ? 1 : req.user?.tenantId;
+    const isSaaSTenant = req.user?.tenantId && Number(req.user.tenantId) !== 1;
+    const tenantId = isSaaSTenant ? req.user.tenantId : (isBusinessClient ? 1 : req.user?.tenantId);
     const vehicles = await vehicleService.getVehicles(tenantId);
     res.json({ success: true, data: vehicles });
   } catch (err) {

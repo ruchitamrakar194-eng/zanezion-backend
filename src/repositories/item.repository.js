@@ -67,6 +67,7 @@ export const deleteItem = async (id) => {
   return await prisma.$transaction([
     prisma.inventoryStock.deleteMany({ where: { itemId: id } }),
     prisma.stockMovement.deleteMany({ where: { itemId: id } }),
+    prisma.lossAssessment.deleteMany({ where: { itemId: id } }),
     prisma.deliveryItem.deleteMany({ where: { itemId: id } }),
     prisma.orderItem.deleteMany({ where: { itemId: id } }),
     prisma.invoiceItem.deleteMany({ where: { itemId: id } }),
