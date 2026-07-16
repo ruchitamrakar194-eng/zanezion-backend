@@ -15,10 +15,10 @@ export const globalErrorHandler = (err, req, res, next) => {
       err.message = 'Duplicate field value entered';
       err.statusCode = 400;
     }
-    if (err.code === 'P2003') {
-      err.message = 'Cannot delete this record because it is currently in use or has associated history.';
-      err.statusCode = 400;
-    }
+// if (err.code === 'P2003') {
+    //   err.message = 'Cannot delete this record because it is currently in use or has associated history.';
+    //   err.statusCode = 400;
+    // }
   }
 
   sendResponse(res, err.statusCode, err.message);

@@ -10,11 +10,19 @@ export const createDelivery = async (data, performerId, tenantId) => {
 
   let order;
   if (data.orderId) {
-    order = await orderRepo.findOrderById(Number(data.orderId));
+    const numericOrderId = Number(data.orderId);
+    if (!isNaN(numericOrderId)) {
+      order = await orderRepo.findOrderById(numericOrderId);
+    }
+    
     if (!order) {
       const strId = String(data.orderId);
       if (strId.length >= 8) {
-        const formattedRef = `ORD-${strId.slice(0, 4)}-${strId.slice(4)}`;
+        // Just search directly if it looks like an order number format
+        let formattedRef = strId;
+        if (!strId.startsWith('ORD-') && strId.length === 8) {
+             formattedRef = `ORD-${strId.slice(0, 4)}-${strId.slice(4)}`;
+        }
         order = await prisma.order.findFirst({
           where: {
             orderNumber: formattedRef,
@@ -41,7 +49,12 @@ export const createDelivery = async (data, performerId, tenantId) => {
 
   if (!order || (tenantId !== null && order.tenantId !== tenantId)) {
     // Auto-create an ad-hoc order to support "Deploy New Mission" standalone flow
-    let clientIdToUse = data.clientId;
+    let clientIdToUse = data.clientId ? Number(data.clientId) : null;
+    if (clientIdToUse) {
+      const clientExists = await prisma.client.findUnique({ where: { id: clientIdToUse } });
+      if (!clientExists) clientIdToUse = null;
+    }
+    
     if (!clientIdToUse) {
       // 1. Try to find a client record by tenantId
       let defaultClient = await prisma.client.findFirst({ where: { ...(tenantId != null && { tenantId }) } });
@@ -95,7 +108,12 @@ export const createDelivery = async (data, performerId, tenantId) => {
     deliveryData.warehouseId = adHocWarehouseId;
 
     const employee = await prisma.employee.findUnique({ where: { userId: performerId } });
-    const orderCreatedById = employee ? employee.id : 1;
+    let orderCreatedById = employee?.id;
+    if (!orderCreatedById) {
+      const fallbackEmp = await prisma.employee.findFirst({ where: { tenantId } }) || await prisma.employee.findFirst();
+      if (!fallbackEmp) throw new AppError('No staff found in system to assign as order creator. Please add staff first.', 400);
+      orderCreatedById = fallbackEmp.id;
+    }
 
     let orderNumberToUse = undefined;
     if (data.orderId) {
@@ -108,7 +126,10 @@ export const createDelivery = async (data, performerId, tenantId) => {
     }
 
     const validItems = await Promise.all(items.map(async (it) => {
-      const itemExists = it.itemId ? await prisma.item.findUnique({ where: { id: Number(it.itemId) } }) : null;
+      let numericItemId = Number(it.itemId);
+      const itemExists = (!isNaN(numericItemId) && numericItemId > 0) 
+          ? await prisma.item.findUnique({ where: { id: numericItemId } }) 
+          : null;
       const finalItemId = itemExists ? itemExists.id : defaultItem.id;
       it.itemId = finalItemId; // Mutate the original item so the validation loop sees the correct ID
       return {
@@ -178,13 +199,21 @@ export const createDelivery = async (data, performerId, tenantId) => {
   // Validate quantities: Delivery quantity cannot exceed (Order Quantity - Already Delivered Quantity)
   for (let i = 0; i < items.length; i++) {
     const item = items[i];
-    const orderItemId = item.orderItemId;
     let orderItem;
 
-    if (orderItemId) {
-      orderItem = order.items?.find(oi => oi.id == orderItemId);
-    } else {
-      orderItem = order.items?.find(oi => oi.itemId == item.itemId);
+    if (item.orderItemId) {
+      const numericOrderItemId = Number(item.orderItemId);
+      if (!isNaN(numericOrderItemId) && numericOrderItemId > 0) {
+          orderItem = order.items?.find(oi => oi.id == numericOrderItemId);
+      }
+    } 
+    
+    if (!orderItem) {
+      let numericItemId = Number(item.itemId);
+      if (!isNaN(numericItemId) && numericItemId > 0) {
+          orderItem = order.items?.find(oi => oi.itemId == numericItemId);
+      }
+      
       if (!orderItem && order.items && order.items[i]) {
         orderItem = order.items[i];
         item.itemId = orderItem.itemId;
@@ -198,7 +227,6 @@ export const createDelivery = async (data, performerId, tenantId) => {
       continue;
     }
 
-    // Set the resolved orderItemId on the item
     if (!item.orderItemId) {
       item.orderItemId = orderItem.id;
     }

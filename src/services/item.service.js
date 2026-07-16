@@ -63,7 +63,9 @@ export const getItems = async (tenantId, query) => {
 
 export const getItemById = async (id, tenantId) => {
   const item = await itemRepo.findItemById(id);
-  if (!item || (tenantId !== null && item.tenantId !== tenantId)) {
+  const hasAccess = tenantId === null || 
+                    (Array.isArray(tenantId) ? tenantId.map(Number).includes(Number(item?.tenantId)) : Number(item?.tenantId) === Number(tenantId));
+  if (!item || !hasAccess) {
     throw new AppError('Item not found', 404);
   }
   return item;

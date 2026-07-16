@@ -86,3 +86,14 @@ export const createPOD = async (tx, deliveryId, tenantId, podData) => {
     }
   });
 };
+
+export const deleteMission = async (id) => {
+  const isNumeric = !isNaN(id) && !isNaN(parseInt(id, 10));
+  const mission = await prisma.mission.findFirst({
+    where: isNumeric ? { id: parseInt(id, 10) } : { missionNumber: id },
+  });
+  if (mission) {
+    return await prisma.mission.delete({ where: { id: mission.id } });
+  }
+  return null;
+};

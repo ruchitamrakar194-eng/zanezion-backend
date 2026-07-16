@@ -3,6 +3,16 @@ import { sendResponse } from '../utils/response.js';
 import prisma from '../config/db.js';
 import { resolveTenantId } from '../utils/tenantResolver.js';
 
+const getTenantIdToFilter = (req) => {
+  const isSuperAdmin = req.user?.role?.name === 'SUPER_ADMIN';
+  const isAdmin = req.user?.role?.name === 'ADMIN' || isSuperAdmin;
+  // If the user is an admin on the master/system tenant (tenant 1), bypass tenant filtering.
+  if (isAdmin && (req.user?.tenantId === 1 || !req.user?.tenantId)) {
+    return null;
+  }
+  return req.user?.tenantId || 1;
+};
+
 export const createOrder = async (req, res, next) => {
   try {
     // Normalize payload to handle both snake_case and camelCase
@@ -92,7 +102,7 @@ export const createOrder = async (req, res, next) => {
 
 export const getOrders = async (req, res, next) => {
   try {
-    const tenantIdToFilter = resolveTenantId(req);
+    const tenantIdToFilter = getTenantIdToFilter(req);
 
     if (['INDIVIDUAL_CLIENT', 'CUSTOMER'].includes(req.user.role?.name?.toUpperCase())) {
       req.query.clientId = req.user.clientId;
@@ -107,7 +117,7 @@ export const getOrders = async (req, res, next) => {
 
 export const getOrderById = async (req, res, next) => {
   try {
-    const tenantIdToFilter = resolveTenantId(req);
+    const tenantIdToFilter = getTenantIdToFilter(req);
 
     const order = await orderService.getOrderById(Number(req.params.id), tenantIdToFilter);
     sendResponse(res, 200, 'Order fetched successfully', order);
@@ -119,7 +129,7 @@ export const getOrderById = async (req, res, next) => {
 export const updateOrderStatus = async (req, res, next) => {
   try {
     const { status, remarks } = req.body;
-    const tenantIdToFilter = resolveTenantId(req);
+    const tenantIdToFilter = getTenantIdToFilter(req);
 
     const updatedOrder = await orderService.updateOrderStatus(
       Number(req.params.id),
@@ -136,7 +146,7 @@ export const updateOrderStatus = async (req, res, next) => {
 
 export const getOrderTimeline = async (req, res, next) => {
   try {
-    const tenantIdToFilter = resolveTenantId(req);
+    const tenantIdToFilter = getTenantIdToFilter(req);
     const order = await orderService.getOrderById(Number(req.params.id), tenantIdToFilter);
 
     const meta = typeof order.metadata === 'string' ? JSON.parse(order.metadata) : (order.metadata || {});
@@ -169,7 +179,7 @@ export const getOrderTimeline = async (req, res, next) => {
 
 export const updateOrder = async (req, res, next) => {
   try {
-    const tenantIdToFilter = resolveTenantId(req);
+    const tenantIdToFilter = getTenantIdToFilter(req);
 
     const updatedOrder = await orderService.updateOrder(Number(req.params.id), req.body, tenantIdToFilter, req.user.id);
     sendResponse(res, 200, 'Order updated successfully', updatedOrder);
@@ -180,7 +190,7 @@ export const updateOrder = async (req, res, next) => {
 
 export const deleteOrder = async (req, res, next) => {
   try {
-    const tenantIdToFilter = resolveTenantId(req);
+    const tenantIdToFilter = getTenantIdToFilter(req);
 
     await orderService.deleteOrder(Number(req.params.id), tenantIdToFilter, req.user.id);
     sendResponse(res, 200, 'Order deleted successfully');

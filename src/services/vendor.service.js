@@ -27,7 +27,9 @@ export const getVendors = async (tenantId, query) => {
 
 export const getVendorById = async (id, tenantId) => {
   const vendor = await vendorRepository.findVendorById(id);
-  if (!vendor || (tenantId !== null && vendor.tenantId !== tenantId)) {
+  const hasAccess = tenantId === null || 
+                    (Array.isArray(tenantId) ? tenantId.map(Number).includes(Number(vendor?.tenantId)) : Number(vendor?.tenantId) === Number(tenantId));
+  if (!vendor || !hasAccess) {
     throw new AppError('Vendor not found', 404);
   }
   return vendor;
