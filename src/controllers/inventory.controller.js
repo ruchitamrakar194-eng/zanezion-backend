@@ -52,13 +52,13 @@ export const getInventory = async (req, res, next) => {
     const isClient = checkIsClient(req.user);
     const isSaaSTenant = req.user.tenantId && Number(req.user.tenantId) !== 1;
     const tenantId = isSuperAdmin ? null :
+                     isClient ? [1, req.user.tenantId] :
                      isSaaSTenant ? Number(req.user.tenantId) :
-                     isClient ? 1 :
                      (req.user.tenantId || 1);
 
     const items = await prisma.item.findMany({
       where: {
-        ...(tenantId !== null && { tenantId }),
+        ...(tenantId !== null && (Array.isArray(tenantId) ? { tenantId: { in: tenantId.map(Number) } } : { tenantId: Number(tenantId) })),
       },
       include: {
         category: true,
