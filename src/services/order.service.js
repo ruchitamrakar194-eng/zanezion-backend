@@ -341,7 +341,7 @@ export const deleteOrder = async (orderId, tenantIdToFilter, clientIdToFilter, p
 
     const order = await tx.order.findFirst({
       where,
-      include: { orderItems: true }
+      include: { items: true }
     });
 
     if (!order) {
@@ -350,11 +350,11 @@ export const deleteOrder = async (orderId, tenantIdToFilter, clientIdToFilter, p
 
     // Release reserved stock for inventory items if status is not delivered/cancelled
     if (order.status !== 'delivered' && order.status !== 'cancelled' && order.orderType === 'DELIVERY') {
-      await releaseReservedStock(tx, order.orderItems);
+      await releaseReservedStock(tx, order.items);
     }
 
     // Delete associated items
-    if (order.orderItems && order.orderItems.length > 0) {
+    if (order.items && order.items.length > 0) {
        await tx.orderItem.deleteMany({ where: { orderId: order.id } });
     }
 
