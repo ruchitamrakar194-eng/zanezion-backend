@@ -92,8 +92,10 @@ export const updateVendor = async (req, res, next) => {
     if (payload.address !== undefined) vendorData.address = payload.address;
     const existingVendor = await vendorService.getVendorById(Number(req.params.id), tenantIdToFilter);
     if (payload.status !== undefined && payload.status !== existingVendor.status) {
-      if (payload.status === 'active' && !isSuperAdmin) {
-        throw new AppError('Only Super Admins can activate vendors', 403);
+      const roleName = req.user.role?.name?.toUpperCase() || '';
+      const isVendorAdmin = ['SUPER_ADMIN', 'ADMIN', 'PROCUREMENT', 'SAAS_CLIENT'].includes(roleName);
+      if (payload.status === 'active' && !isVendorAdmin) {
+        throw new AppError('Only authorized admins can activate vendors', 403);
       }
       vendorData.status = payload.status;
     }
