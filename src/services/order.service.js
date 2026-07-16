@@ -353,7 +353,28 @@ export const deleteOrder = async (orderId, tenantIdToFilter, clientIdToFilter, p
       await releaseReservedStock(tx, order.items);
     }
 
-    // Delete associated items
+    // Cascade delete Invoices & related
+    const invoices = await tx.invoice.findMany({ where: { orderId: order.id }, select: { id: true } });
+    const invoiceIds = invoices.map(i => i.id);
+    if (invoiceIds.length > 0) {
+      await tx.receipt.deleteMany({ where: { invoiceId: { in: invoiceIds } } });
+      await tx.payment.deleteMany({ where: { invoiceId: { in: invoiceIds } } });
+      await tx.invoiceItem.deleteMany({ where: { invoiceId: { in: invoiceIds } } });
+      await tx.invoice.deleteMany({ where: { orderId: order.id } });
+    }
+
+    // Cascade delete Deliveries & related
+    const deliveries = await tx.delivery.findMany({ where: { orderId: order.id }, select: { id: true } });
+    const deliveryIds = deliveries.map(d => d.id);
+    if (deliveryIds.length > 0) {
+      await tx.deliveryItem.deleteMany({ where: { deliveryId: { in: deliveryIds } } });
+      await tx.delivery.deleteMany({ where: { orderId: order.id } });
+    }
+
+    // Cascade delete Missions
+    await tx.mission.deleteMany({ where: { orderId: order.id } });
+
+    // Delete associated order items
     if (order.items && order.items.length > 0) {
        await tx.orderItem.deleteMany({ where: { orderId: order.id } });
     }
