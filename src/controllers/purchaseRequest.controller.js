@@ -1,15 +1,6 @@
 import * as prService from '../services/purchaseRequest.service.js';
 import { sendResponse } from '../utils/response.js';
-
-const getTenantIdToFilter = (req) => {
-  const isSuperAdmin = req.user?.role?.name === 'SUPER_ADMIN';
-  const isAdmin = req.user?.role?.name === 'ADMIN' || isSuperAdmin;
-  // If the user is an admin on the master/system tenant (tenant 1), bypass tenant filtering so they can manage all purchase requests.
-  if (isAdmin && (req.user?.tenantId === 1 || !req.user?.tenantId)) {
-    return null;
-  }
-  return req.user?.tenantId || 1;
-};
+import { resolveTenantId } from '../utils/tenantResolver.js';
 
 export const createPurchaseRequest = async (req, res, next) => {
   try {
@@ -31,7 +22,7 @@ export const createPurchaseRequest = async (req, res, next) => {
 
 export const getPurchaseRequests = async (req, res, next) => {
   try {
-    const tenantIdToFilter = getTenantIdToFilter(req);
+    const tenantIdToFilter = resolveTenantId(req);
 
     const result = await prService.getPurchaseRequests(tenantIdToFilter, req.query, req.user);
     
@@ -58,7 +49,7 @@ export const getPurchaseRequests = async (req, res, next) => {
 
 export const getPurchaseRequestById = async (req, res, next) => {
   try {
-    const tenantIdToFilter = getTenantIdToFilter(req);
+    const tenantIdToFilter = resolveTenantId(req);
 
     const pr = await prService.getPurchaseRequestById(Number(req.params.id), tenantIdToFilter);
     let created_by = pr.requestedBy;
@@ -79,7 +70,7 @@ export const getPurchaseRequestById = async (req, res, next) => {
 
 export const updatePurchaseRequest = async (req, res, next) => {
   try {
-    const tenantIdToFilter = getTenantIdToFilter(req);
+    const tenantIdToFilter = resolveTenantId(req);
 
     const updatedPr = await prService.updatePurchaseRequest(Number(req.params.id), req.body, tenantIdToFilter, req.user.id);
     sendResponse(res, 200, 'Purchase Request updated successfully', updatedPr);
@@ -90,7 +81,7 @@ export const updatePurchaseRequest = async (req, res, next) => {
 
 export const updatePurchaseRequestStatus = async (req, res, next) => {
   try {
-    const tenantIdToFilter = getTenantIdToFilter(req);
+    const tenantIdToFilter = resolveTenantId(req);
     const { status } = req.body;
 
     const updatedPr = await prService.updatePurchaseRequestStatus(Number(req.params.id), status, tenantIdToFilter, req.user.id);
@@ -102,7 +93,7 @@ export const updatePurchaseRequestStatus = async (req, res, next) => {
 
 export const deletePurchaseRequest = async (req, res, next) => {
   try {
-    const tenantIdToFilter = getTenantIdToFilter(req);
+    const tenantIdToFilter = resolveTenantId(req);
 
     await prService.deletePurchaseRequest(Number(req.params.id), tenantIdToFilter, req.user.id);
     sendResponse(res, 200, 'Purchase Request deleted successfully');
