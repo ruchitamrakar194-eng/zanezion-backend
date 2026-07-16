@@ -12,9 +12,8 @@
  */
 export const resolveTenantId = (req) => {
   const isSuperAdmin = req.user?.role?.name === 'SUPER_ADMIN';
-  const isAdmin = req.user?.role?.name === 'ADMIN';
 
-  if (isSuperAdmin || isAdmin) {
+  if (isSuperAdmin) {
     // If Super Admin explicitly passes ?tenantId=X, use that (for tenant drill-down)
     if (req.query?.tenantId) {
       return Number(req.query.tenantId);
@@ -23,7 +22,7 @@ export const resolveTenantId = (req) => {
     return req.user?.tenantId || 1;
   }
 
-  // All other roles: strictly their own tenant
+  // All other roles (including tenant-level ADMIN): strictly their own tenant
   return req.user?.tenantId || 1;
 };
 
@@ -54,9 +53,10 @@ export const resolveTenantIdForSaasManagement = (req) => {
 export const resolveTenantIdForOperations = (req) => {
   const roleName = req.user?.role?.name?.toUpperCase();
   const isOperationalStaff = ['LOGISTICS', 'OPERATIONS', 'STAFF', 'FIELD_STAFF', 'CONCIERGE', 'SECURITY', 'DRIVER'].includes(roleName);
+  const isMasterTenant = req.user?.tenantId === 1 || !req.user?.tenantId;
   
-  if (isOperationalStaff) {
-    return null; // Cross-tenant visibility
+  if (isOperationalStaff && isMasterTenant) {
+    return null; // Cross-tenant visibility only for central master-tenant operational staff
   }
 
   // Fallback to standard tenant resolution
