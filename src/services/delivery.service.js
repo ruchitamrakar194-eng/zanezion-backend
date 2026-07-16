@@ -48,7 +48,108 @@ export const createDelivery = async (data, performerId, tenantId) => {
   }
 
   if (!order || (tenantId !== null && order.tenantId !== tenantId)) {
-    throw new AppError('An Order must be selected to create a Delivery or Mission. Please link an existing order.', 400);
+    // Auto-create an ad-hoc order to support "Deploy New Mission" standalone flow
+    let clientIdToUse = data.clientId;
+    if (!clientIdToUse) {
+      const defaultClient = await prisma.client.findFirst({ where: { ...(tenantId != null && { tenantId }) } });
+      if (!defaultClient) throw new AppError('No clients available to assign to ad-hoc mission', 400);
+      clientIdToUse = defaultClient.id;
+    }
+
+    let adHocWarehouseId = data.warehouseId;
+    if (!adHocWarehouseId) {
+      const firstWarehouse = await prisma.warehouse.findFirst({ where: { ...(tenantId != null && { tenantId }) } });
+      if (firstWarehouse) adHocWarehouseId = firstWarehouse.id;
+    }
+    if (!adHocWarehouseId) throw new AppError('No warehouse available for ad-hoc mission', 400);
+
+    let defaultItem = await prisma.item.findFirst({ where: { ...(tenantId != null && { tenantId }) } });
+    if (!defaultItem) {
+      // Find or create category for this tenant
+      let category = await prisma.itemCategory.findFirst({
+        where: { name: 'General', ...(tenantId != null && { tenantId }) }
+      });
+      if (!category) {
+        category = await prisma.itemCategory.create({
+          data: {
+            name: 'General',
+            description: 'General Category',
+            tenantId: tenantId || 1,
+            status: 'active'
+          }
+        });
+      }
+
+      // Find or create unit for this tenant
+      let unit = await prisma.itemUnit.findFirst({
+        where: { shortName: 'pcs', ...(tenantId != null && { tenantId }) }
+      });
+      if (!unit) {
+        unit = await prisma.itemUnit.create({
+          data: {
+            name: 'Pieces',
+            shortName: 'pcs',
+            tenantId: tenantId || 1,
+            status: 'active'
+          }
+        });
+      }
+
+      defaultItem = await prisma.item.create({
+        data: {
+          tenantId: tenantId || 1,
+          categoryId: category.id,
+          unitId: unit.id,
+          sku: 'MISC-' + Date.now().toString().slice(-6),
+          name: 'Miscellaneous Asset',
+          description: 'Miscellaneous Asset',
+          inventoryType: 'INTERNAL',
+          price: 0,
+          status: 'active'
+        }
+      });
+    }
+
+    data.warehouseId = adHocWarehouseId;
+    deliveryData.warehouseId = adHocWarehouseId;
+
+    const employee = await prisma.employee.findFirst({ where: { userId: performerId } });
+    const orderCreatedById = employee ? employee.id : 1;
+
+    let orderNumberToUse = undefined;
+    if (data.orderId) {
+      const strId = String(data.orderId);
+      if (strId.startsWith('ORD-')) {
+        orderNumberToUse = strId;
+      } else if (strId.length >= 8) {
+        orderNumberToUse = `ORD-${strId.slice(0, 4)}-${strId.slice(4)}`;
+      }
+    }
+
+    const validItems = await Promise.all(items.map(async (it) => {
+      const itemExists = it.itemId ? await prisma.item.findFirst({ where: { id: Number(it.itemId), ...(tenantId != null && { tenantId }) } }) : null;
+      const finalItemId = itemExists ? itemExists.id : defaultItem.id;
+      it.itemId = finalItemId; // Mutate the original item so the validation loop sees the correct ID
+      return {
+        itemId: finalItemId,
+        quantity: it.quantity || 1,
+        unitPrice: 0,
+        warehouseId: adHocWarehouseId
+      };
+    }));
+
+    order = await orderRepo.createOrder({
+      orderNumber: orderNumberToUse,
+      clientId: clientIdToUse,
+      createdById: orderCreatedById,
+      status: 'approved',
+      orderType: data.missionType === 'Chauffeur' ? 'Service' : 'Delivery',
+      priority: 'high'
+    }, validItems, tenantId);
+
+    data.orderId = order.id;
+    deliveryData.orderId = order.id;
+    deliveryData.clientId = clientIdToUse;
   }
 
   if (!['draft', 'pending', 'approved', 'ready_for_delivery', 'planned', 'active', 'in_progress', 'Pending', 'In Progress', 'operation', 'procurement', 'inventory', 'logistics', 'concierge', 'created', 'admin_review', 'pending_review'].includes(order.status)) {
