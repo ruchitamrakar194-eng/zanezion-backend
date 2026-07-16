@@ -54,7 +54,7 @@ export const resolveTenantIdForOperations = (req) => {
   const roleName = req.user?.role?.name?.toUpperCase();
   const isOperationalStaff = ['LOGISTICS', 'OPERATIONS', 'STAFF', 'FIELD_STAFF', 'CONCIERGE', 'SECURITY', 'DRIVER'].includes(roleName);
   const isMasterTenant = req.user?.tenantId === 1 || !req.user?.tenantId;
-  
+
   if (isOperationalStaff && isMasterTenant) {
     return null; // Cross-tenant visibility only for central master-tenant operational staff
   }

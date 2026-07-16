@@ -46,7 +46,11 @@ export const getVendors = async (req, res, next) => {
     const isClient = checkIsClient(req.user);
     const isSaaSTenant = req.user.tenantId && Number(req.user.tenantId) !== 1;
     const tenantIdToFilter = isSuperAdmin && !req.query.tenantId ? null :
+<<<<<<< HEAD
+                             isClient ? [1, req.user.tenantId] :
+=======
                              isClient ? [1, req.user.tenantId].filter(t => t !== null && t !== undefined).map(Number) :
+>>>>>>> 17a23febc3d9b25e0ee151cb3ee19ce44c5e9fe6
                              isSaaSTenant ? Number(req.user.tenantId) :
                              (req.query.tenantId ? Number(req.query.tenantId) : req.user.tenantId);
 
@@ -63,7 +67,11 @@ export const getVendorById = async (req, res, next) => {
     const isClient = checkIsClient(req.user);
     const isSaaSTenant = req.user.tenantId && Number(req.user.tenantId) !== 1;
     const tenantIdToFilter = isSuperAdmin ? null :
+<<<<<<< HEAD
+                             isClient ? [1, req.user.tenantId] :
+=======
                              isClient ? [1, req.user.tenantId].filter(t => t !== null && t !== undefined).map(Number) :
+>>>>>>> 17a23febc3d9b25e0ee151cb3ee19ce44c5e9fe6
                              isSaaSTenant ? Number(req.user.tenantId) :
                              (req.user.tenantId || 1);
 
