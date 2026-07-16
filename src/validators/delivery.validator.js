@@ -7,7 +7,7 @@ const deliveryItemSchema = z.object({
 });
 
 export const createDeliverySchema = z.object({
-  orderId: z.number().int().positive('Order ID is required').optional().nullable(),
+  orderId: z.union([z.number().int().positive(), z.string()]).optional().nullable(),
   warehouseId: z.number().int().positive('Warehouse ID is required').optional().nullable(),
   clientId: z.number().int().positive('Client ID is required').optional().nullable(),
   remarks: z.string().optional(),
