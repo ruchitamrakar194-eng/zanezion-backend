@@ -290,6 +290,14 @@ export const getDeliveryById = async (id, tenantId, clientId = null) => {
       }
     });
   }
+  
+  console.log('[DEBUG GET] ID:', id, 'tenantId:', tenantId, 'clientId:', clientId);
+  if (delivery) {
+    console.log('[DEBUG GET] delivery found! tenantId:', delivery.tenantId, 'clientId:', delivery.clientId);
+  } else {
+    console.log('[DEBUG GET] delivery NOT found in DB');
+  }
+
   if (!delivery || (tenantId !== null && delivery.tenantId !== tenantId) || (clientId !== null && delivery.clientId !== clientId)) {
     throw new AppError('Delivery not found', 404);
   }

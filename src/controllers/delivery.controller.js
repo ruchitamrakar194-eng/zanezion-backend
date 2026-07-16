@@ -22,7 +22,7 @@ export const getDeliveries = async (req, res, next) => {
     const tenantIdToFilter = resolveTenantIdForOperations(req);
     const roleName = req.user.role?.name?.toUpperCase();
 
-    if (['INDIVIDUAL_CLIENT', 'CUSTOMER', 'BUSINESS_CLIENT', 'CLIENT'].includes(roleName)) {
+    if (['INDIVIDUAL_CLIENT', 'CUSTOMER'].includes(roleName)) {
       req.query.clientId = req.user.clientId;
     }
 
@@ -37,7 +37,7 @@ export const getDeliveryById = async (req, res, next) => {
   try {
     const tenantIdToFilter = resolveTenantIdForOperations(req);
     const roleName = req.user.role?.name?.toUpperCase();
-    const clientIdToFilter = ['INDIVIDUAL_CLIENT', 'CUSTOMER', 'BUSINESS_CLIENT', 'CLIENT'].includes(roleName) ? req.user.clientId : null;
+    const clientIdToFilter = ['INDIVIDUAL_CLIENT', 'CUSTOMER'].includes(roleName) ? req.user.clientId : null;
 
     const delivery = await deliveryService.getDeliveryById(Number(req.params.id), tenantIdToFilter, clientIdToFilter);
     sendResponse(res, 200, 'Delivery fetched successfully', delivery);
@@ -63,7 +63,7 @@ export const updateDelivery = async (req, res, next) => {
   try {
     const tenantIdToFilter = resolveTenantIdForOperations(req);
     const roleName = req.user.role?.name?.toUpperCase();
-    const clientIdToFilter = ['INDIVIDUAL_CLIENT', 'CUSTOMER', 'BUSINESS_CLIENT', 'CLIENT'].includes(roleName) ? req.user.clientId : null;
+    const clientIdToFilter = ['INDIVIDUAL_CLIENT', 'CUSTOMER'].includes(roleName) ? req.user.clientId : null;
 
     const delivery = await deliveryService.updateDelivery(Number(req.params.id), req.body, tenantIdToFilter, req.user.id, clientIdToFilter);
     emitToTenant(delivery.tenantId, 'delivery_update', delivery);
@@ -77,7 +77,7 @@ export const deleteDelivery = async (req, res, next) => {
   try {
     const tenantIdToFilter = resolveTenantIdForOperations(req);
     const roleName = req.user.role?.name?.toUpperCase();
-    const clientIdToFilter = ['INDIVIDUAL_CLIENT', 'CUSTOMER', 'BUSINESS_CLIENT', 'CLIENT'].includes(roleName) ? req.user.clientId : null;
+    const clientIdToFilter = ['INDIVIDUAL_CLIENT', 'CUSTOMER'].includes(roleName) ? req.user.clientId : null;
 
     await deliveryService.deleteDelivery(Number(req.params.id), tenantIdToFilter, req.user.id, clientIdToFilter);
     sendResponse(res, 200, 'Delivery and associated records deleted successfully');
