@@ -37,7 +37,7 @@ export const findAllStock = async (tenantId, query) => {
   const skip = (page - 1) * limit;
 
   const where = {
-    ...(tenantId !== null && { tenantId }),
+    ...(tenantId !== null && (Array.isArray(tenantId) ? { tenantId: { in: tenantId.map(Number) } } : { tenantId: Number(tenantId) })),
     ...(warehouseId && { warehouseId: Number(warehouseId) }),
     ...(itemId && { itemId: Number(itemId) })
   };
@@ -64,7 +64,7 @@ export const findAllMovements = async (tenantId, query) => {
   const skip = (page - 1) * limit;
 
   const where = {
-    ...(tenantId !== null && { tenantId }),
+    ...(tenantId !== null && (Array.isArray(tenantId) ? { tenantId: { in: tenantId.map(Number) } } : { tenantId: Number(tenantId) })),
     ...(warehouseId && { warehouseId: Number(warehouseId) }),
     ...(itemId && { itemId: Number(itemId) }),
     ...(movementType && { movementType })

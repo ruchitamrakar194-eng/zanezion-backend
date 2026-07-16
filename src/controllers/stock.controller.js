@@ -37,8 +37,8 @@ export const getStock = async (req, res, next) => {
     const isClient = checkIsClient(req.user);
     const isSaaSTenant = req.user.tenantId && Number(req.user.tenantId) !== 1;
     const tenantIdToFilter = isSuperAdmin && !req.query.tenantId ? null :
+                             isClient ? [1, req.user.tenantId].filter(t => t !== null && t !== undefined).map(Number) :
                              isSaaSTenant ? Number(req.user.tenantId) :
-                             isClient ? 1 :
                              (req.query.tenantId ? Number(req.query.tenantId) : req.user.tenantId);
 
     const result = await stockService.getStock(tenantIdToFilter, req.query);
@@ -54,8 +54,8 @@ export const getMovements = async (req, res, next) => {
     const isClient = checkIsClient(req.user);
     const isSaaSTenant = req.user.tenantId && Number(req.user.tenantId) !== 1;
     const tenantIdToFilter = isSuperAdmin && !req.query.tenantId ? null :
+                             isClient ? [1, req.user.tenantId].filter(t => t !== null && t !== undefined).map(Number) :
                              isSaaSTenant ? Number(req.user.tenantId) :
-                             isClient ? 1 :
                              (req.query.tenantId ? Number(req.query.tenantId) : req.user.tenantId);
 
     const result = await stockService.getMovements(tenantIdToFilter, req.query);
