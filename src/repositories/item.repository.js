@@ -71,7 +71,7 @@ export const deleteItem = async (id) => {
     prisma.deliveryItem.deleteMany({ where: { itemId: id } }),
     prisma.orderItem.deleteMany({ where: { itemId: id } }),
     prisma.invoiceItem.deleteMany({ where: { itemId: id } }),
-    prisma.grnItem.deleteMany({ where: { itemId: id } }),
+    prisma.gRNItem.deleteMany({ where: { itemId: id } }),
     prisma.item.delete({ where: { id } })
   ]);
 };
