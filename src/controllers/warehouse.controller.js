@@ -37,8 +37,8 @@ export const getWarehouses = async (req, res, next) => {
     const isClient = checkIsClient(req.user);
     const isSaaSTenant = req.user.tenantId && Number(req.user.tenantId) !== 1;
     const tenantIdToFilter = isSuperAdmin && !req.query.tenantId ? null :
-                             isSaaSTenant ? Number(req.user.tenantId) :
                              isClient ? [1, req.user.tenantId] :
+                             isSaaSTenant ? Number(req.user.tenantId) :
                              (req.query.tenantId ? Number(req.query.tenantId) : req.user.tenantId);
 
     const result = await warehouseService.getWarehouses(tenantIdToFilter, req.query);
@@ -54,8 +54,8 @@ export const getWarehouseById = async (req, res, next) => {
     const isClient = checkIsClient(req.user);
     const isSaaSTenant = req.user.tenantId && Number(req.user.tenantId) !== 1;
     const tenantIdToFilter = isSuperAdmin ? null :
-                             isSaaSTenant ? Number(req.user.tenantId) :
                              isClient ? [1, req.user.tenantId] :
+                             isSaaSTenant ? Number(req.user.tenantId) :
                              (req.user.tenantId || 1);
 
     const warehouse = await warehouseService.getWarehouseById(Number(req.params.id), tenantIdToFilter);
