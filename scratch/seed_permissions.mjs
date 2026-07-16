@@ -3,10 +3,10 @@ const p = new PrismaClient();
 
 const MATRIX = {
   'ADMIN': ['Dashboard', 'Analytics', 'Clients', 'Vendors', 'Personnel', 'Audit Log', 'Plans', 'Settings', 'Security', 'Projects', 'Orders', 'Missions', 'Deliveries', 'Invoices', 'Payments', 'Purchase Requests', 'Quotes', 'Purchase Orders', 'Fleet', 'Routes', 'Tracking', 'Urgent', 'Inventory', 'Warehouses', 'Alerts', 'Events', 'Guest Requests', 'Luxury Items', 'Access Plans', 'Chauffeur', 'Staff Terminal', 'Assignments', 'Field Map', 'Leave & Absence', 'Pay & Records', 'Payroll', 'Support', 'Marketplace', 'My Orders', 'Membership'],
-  'PROCUREMENT': ['Dashboard', 'Vendors', 'Purchase Requests', 'Quotes', 'Purchase Orders', 'Inventory', 'Warehouses', 'Invoices', 'Payments', 'Audit Log', 'Staff Terminal', 'Leave & Absence', 'Pay & Records'],
+  'PROCUREMENT': ['Dashboard', 'Orders', 'Vendors', 'Purchase Requests', 'Quotes', 'Purchase Orders', 'Inventory', 'Warehouses', 'Invoices', 'Payments', 'Audit Log', 'Staff Terminal', 'Leave & Absence', 'Pay & Records'],
   'OPERATIONS': ['Dashboard', 'Analytics', 'Projects', 'Orders', 'Missions', 'Deliveries', 'Fleet', 'Routes', 'Tracking', 'Urgent', 'Invoices', 'Payments', 'Staff Terminal', 'Leave & Absence', 'Pay & Records'],
-  'LOGISTICS': ['Dashboard', 'Missions', 'Deliveries', 'Fleet', 'Routes', 'Tracking', 'Urgent', 'Staff Terminal', 'Assignments', 'Field Map', 'Leave & Absence', 'Pay & Records'],
-  'INVENTORY': ['Dashboard', 'Inventory', 'Warehouses', 'Alerts', 'Purchase Requests', 'Purchase Orders', 'Staff Terminal', 'Leave & Absence', 'Pay & Records'],
+  'LOGISTICS': ['Dashboard', 'Orders', 'Missions', 'Deliveries', 'Fleet', 'Routes', 'Tracking', 'Urgent', 'Staff Terminal', 'Assignments', 'Field Map', 'Leave & Absence', 'Pay & Records'],
+  'INVENTORY': ['Dashboard', 'Orders', 'Inventory', 'Warehouses', 'Alerts', 'Purchase Requests', 'Purchase Orders', 'Staff Terminal', 'Leave & Absence', 'Pay & Records'],
   'CONCIERGE': ['Dashboard', 'Orders', 'Events', 'Guest Requests', 'Luxury Items', 'Access Plans', 'Chauffeur', 'Clients', 'Staff Terminal', 'Leave & Absence', 'Pay & Records'],
   'STAFF': ['Staff Terminal', 'Assignments', 'Field Map', 'Leave & Absence', 'Pay & Records', 'Dashboard'],
   'CLIENT': ['Dashboard', 'Marketplace', 'My Orders', 'Membership', 'Support', 'Quotes', 'Invoices'],
@@ -43,7 +43,7 @@ async function seed() {
           can_view: true,
           can_add: true,
           can_edit: true,
-          can_delete: true
+          can_delete: roleName === 'ADMIN'
         });
       } else {
         console.warn(`Warning: Menu "${mName}" not found for role ${roleName}`);
