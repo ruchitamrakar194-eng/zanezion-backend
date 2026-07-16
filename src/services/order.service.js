@@ -274,24 +274,6 @@ export const updateOrder = async (id, data, tenantId, performerId) => {
   };
 };
 
-export const deleteOrder = async (id, tenantId, performerId) => {
-  const order = await getOrderById(id, tenantId);
-
-
-
-  await orderRepo.deleteOrder(id);
-
-  await logAudit({
-    module: 'ORDERS',
-    action: 'DELETE',
-    description: `Deleted Order ${order.orderNumber}`,
-    oldValue: order,
-    performedBy: performerId
-  });
-
-  return true;
-};
-
 export const convertOrderToProject = async (orderId, projectData, tenantId, performerId) => {
   const order = await getOrderById(orderId, tenantId);
 
@@ -350,4 +332,66 @@ export const convertOrderToProject = async (orderId, projectData, tenantId, perf
     clientUserId: null
   };
 };
+
+export const deleteOrder = async (orderId, tenantIdToFilter, clientIdToFilter, performerId) => {
+  return await prisma.$transaction(async (tx) => {
+    const where = { id: orderId };
+    if (tenantIdToFilter !== null) where.tenantId = tenantIdToFilter;
+    if (clientIdToFilter !== null) where.clientId = clientIdToFilter;
+
+    const order = await tx.order.findFirst({
+      where,
+      include: { items: true }
+    });
+
+    if (!order) {
+      throw new AppError('Order not found or access denied', 404);
+    }
+
+    // Release reserved stock for inventory items if status is not delivered/cancelled
+    if (order.status !== 'delivered' && order.status !== 'cancelled' && order.orderType === 'DELIVERY') {
+      await releaseReservedStock(tx, order.items);
+    }
+
+    // Cascade delete Invoices & related
+    const invoices = await tx.invoice.findMany({ where: { orderId: order.id }, select: { id: true } });
+    const invoiceIds = invoices.map(i => i.id);
+    if (invoiceIds.length > 0) {
+      await tx.receipt.deleteMany({ where: { invoiceId: { in: invoiceIds } } });
+      await tx.payment.deleteMany({ where: { invoiceId: { in: invoiceIds } } });
+      await tx.invoiceItem.deleteMany({ where: { invoiceId: { in: invoiceIds } } });
+      await tx.invoice.deleteMany({ where: { orderId: order.id } });
+    }
+
+    // Cascade delete Deliveries & related
+    const deliveries = await tx.delivery.findMany({ where: { orderId: order.id }, select: { id: true } });
+    const deliveryIds = deliveries.map(d => d.id);
+    if (deliveryIds.length > 0) {
+      await tx.deliveryItem.deleteMany({ where: { deliveryId: { in: deliveryIds } } });
+      await tx.delivery.deleteMany({ where: { orderId: order.id } });
+    }
+
+    // Cascade delete Missions
+    await tx.mission.deleteMany({ where: { orderId: order.id } });
+
+    // Delete associated order items
+    if (order.items && order.items.length > 0) {
+       await tx.orderItem.deleteMany({ where: { orderId: order.id } });
+    }
+
+    // Delete the order itself
+    await tx.order.delete({ where: { id: order.id } });
+
+    await logAudit({
+      module: 'ORDERS',
+      action: 'DELETE',
+      description: `Deleted Order ${order.orderNumber}`,
+      newValue: null,
+      performedBy: performerId
+    });
+
+    return true;
+  });
+};
+
 

@@ -10,11 +10,19 @@ export const createDelivery = async (data, performerId, tenantId) => {
 
   let order;
   if (data.orderId) {
-    order = await orderRepo.findOrderById(Number(data.orderId));
+    const numericOrderId = Number(data.orderId);
+    if (!isNaN(numericOrderId)) {
+      order = await orderRepo.findOrderById(numericOrderId);
+    }
+    
     if (!order) {
       const strId = String(data.orderId);
       if (strId.length >= 8) {
-        const formattedRef = `ORD-${strId.slice(0, 4)}-${strId.slice(4)}`;
+        // Just search directly if it looks like an order number format
+        let formattedRef = strId;
+        if (!strId.startsWith('ORD-') && strId.length === 8) {
+             formattedRef = `ORD-${strId.slice(0, 4)}-${strId.slice(4)}`;
+        }
         order = await prisma.order.findFirst({
           where: {
             orderNumber: formattedRef,
@@ -40,102 +48,7 @@ export const createDelivery = async (data, performerId, tenantId) => {
   }
 
   if (!order || (tenantId !== null && order.tenantId !== tenantId)) {
-    // Auto-create an ad-hoc order to support "Deploy New Mission" standalone flow
-    let clientIdToUse = data.clientId;
-    if (!clientIdToUse) {
-      // 1. Try to find a client record by tenantId
-      let defaultClient = await prisma.client.findFirst({ where: { ...(tenantId != null && { tenantId }) } });
-
-      // 2. If not found by tenantId, try by the performer user's email (SaaS Client may
-      //    be registered as a Client record with their own email)
-      if (!defaultClient && performerId) {
-        const performerUser = await prisma.user.findUnique({ where: { id: performerId }, select: { email: true } });
-        if (performerUser?.email) {
-          defaultClient = await prisma.client.findFirst({ where: { email: performerUser.email } });
-        }
-      }
-
-      if (!defaultClient) throw new AppError('No clients available to assign to ad-hoc mission. Please assign a client to this tenant first.', 400);
-      clientIdToUse = defaultClient.id;
-    }
-
-    let adHocWarehouseId = data.warehouseId;
-    if (!adHocWarehouseId) {
-      let firstWarehouse = await prisma.warehouse.findFirst({ where: { ...(tenantId != null && { tenantId }) } });
-      if (!firstWarehouse && tenantId !== 1) {
-        firstWarehouse = await prisma.warehouse.findFirst({ where: { tenantId: 1 } });
-      }
-      if (firstWarehouse) adHocWarehouseId = firstWarehouse.id;
-    }
-    if (!adHocWarehouseId) throw new AppError('No warehouse available for ad-hoc mission', 400);
-
-    let defaultItem = await prisma.item.findFirst({ where: { ...(tenantId != null && { tenantId }) } });
-    if (!defaultItem) {
-      let firstCat = await prisma.itemCategory.findFirst({ where: { tenantId: tenantId || 1 } });
-      if (!firstCat) firstCat = await prisma.itemCategory.create({ data: { tenant: { connect: { id: tenantId || 1 } }, name: 'General', description: 'General Category' } });
-
-      let firstUnit = await prisma.itemUnit.findFirst({ where: { tenantId: tenantId || 1 } });
-      if (!firstUnit) firstUnit = await prisma.itemUnit.create({ data: { tenant: { connect: { id: tenantId || 1 } }, name: 'Pieces', shortName: 'pcs' } });
-
-      defaultItem = await prisma.item.create({
-        data: {
-          tenant: { connect: { id: tenantId || 1 } },
-          category: { connect: { id: firstCat.id } },
-          unit: { connect: { id: firstUnit.id } },
-          name: 'Miscellaneous Asset',
-          sku: 'MISC-001',
-          price: 0,
-          inventoryType: 'INTERNAL',
-          status: 'active'
-        }
-      });
-    }
-
-    data.warehouseId = adHocWarehouseId;
-    deliveryData.warehouseId = adHocWarehouseId;
-
-    const employee = await prisma.employee.findUnique({ where: { userId: performerId } });
-    let orderCreatedById = employee?.id;
-    if (!orderCreatedById) {
-      const fallbackEmp = await prisma.employee.findFirst({ where: { tenantId } }) || await prisma.employee.findFirst();
-      if (!fallbackEmp) throw new AppError('No staff found in system to assign as order creator. Please add staff first.', 400);
-      orderCreatedById = fallbackEmp.id;
-    }
-
-    let orderNumberToUse = undefined;
-    if (data.orderId) {
-      const strId = String(data.orderId);
-      if (strId.startsWith('ORD-')) {
-        orderNumberToUse = strId;
-      } else if (strId.length >= 8) {
-        orderNumberToUse = `ORD-${strId.slice(0, 4)}-${strId.slice(4)}`;
-      }
-    }
-
-    const validItems = await Promise.all(items.map(async (it) => {
-      const itemExists = it.itemId ? await prisma.item.findUnique({ where: { id: Number(it.itemId) } }) : null;
-      const finalItemId = itemExists ? itemExists.id : defaultItem.id;
-      it.itemId = finalItemId; // Mutate the original item so the validation loop sees the correct ID
-      return {
-        itemId: finalItemId,
-        quantity: it.quantity || 1,
-        unitPrice: 0,
-        warehouseId: adHocWarehouseId
-      };
-    }));
-
-    order = await orderRepo.createOrder({
-      orderNumber: orderNumberToUse,
-      clientId: clientIdToUse,
-      createdById: orderCreatedById,
-      status: 'approved',
-      orderType: data.missionType === 'Chauffeur' ? 'Service' : 'Delivery',
-      priority: 'high'
-    }, validItems, tenantId);
-
-    data.orderId = order.id;
-    deliveryData.orderId = order.id;
-    deliveryData.clientId = clientIdToUse;
+    throw new AppError('An Order must be selected to create a Delivery or Mission. Please link an existing order.', 400);
   }
 
   if (!['draft', 'pending', 'approved', 'ready_for_delivery', 'planned', 'active', 'in_progress', 'Pending', 'In Progress', 'operation', 'procurement', 'inventory', 'logistics', 'concierge', 'created', 'admin_review', 'pending_review'].includes(order.status)) {
@@ -183,13 +96,21 @@ export const createDelivery = async (data, performerId, tenantId) => {
   // Validate quantities: Delivery quantity cannot exceed (Order Quantity - Already Delivered Quantity)
   for (let i = 0; i < items.length; i++) {
     const item = items[i];
-    const orderItemId = item.orderItemId;
     let orderItem;
 
-    if (orderItemId) {
-      orderItem = order.items?.find(oi => oi.id == orderItemId);
-    } else {
-      orderItem = order.items?.find(oi => oi.itemId == item.itemId);
+    if (item.orderItemId) {
+      const numericOrderItemId = Number(item.orderItemId);
+      if (!isNaN(numericOrderItemId) && numericOrderItemId > 0) {
+          orderItem = order.items?.find(oi => oi.id == numericOrderItemId);
+      }
+    } 
+    
+    if (!orderItem) {
+      let numericItemId = Number(item.itemId);
+      if (!isNaN(numericItemId) && numericItemId > 0) {
+          orderItem = order.items?.find(oi => oi.itemId == numericItemId);
+      }
+      
       if (!orderItem && order.items && order.items[i]) {
         orderItem = order.items[i];
         item.itemId = orderItem.itemId;
@@ -203,7 +124,6 @@ export const createDelivery = async (data, performerId, tenantId) => {
       continue;
     }
 
-    // Set the resolved orderItemId on the item
     if (!item.orderItemId) {
       item.orderItemId = orderItem.id;
     }
