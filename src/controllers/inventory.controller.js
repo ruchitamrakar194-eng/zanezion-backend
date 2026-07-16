@@ -57,6 +57,7 @@ export const getInventory = async (req, res, next) => {
                      (req.user.tenantId || 1);
 
     const items = await prisma.item.findMany({
+      where: {
         ...(tenantId !== null && (Array.isArray(tenantId) ? { tenantId: { in: tenantId } } : { tenantId })),
       },
       include: {
