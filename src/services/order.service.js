@@ -274,24 +274,6 @@ export const updateOrder = async (id, data, tenantId, performerId) => {
   };
 };
 
-export const deleteOrder = async (id, tenantId, performerId) => {
-  const order = await getOrderById(id, tenantId);
-
-
-
-  await orderRepo.deleteOrder(id);
-
-  await logAudit({
-    module: 'ORDERS',
-    action: 'DELETE',
-    description: `Deleted Order ${order.orderNumber}`,
-    oldValue: order,
-    performedBy: performerId
-  });
-
-  return true;
-};
-
 export const convertOrderToProject = async (orderId, projectData, tenantId, performerId) => {
   const order = await getOrderById(orderId, tenantId);
 
@@ -350,4 +332,45 @@ export const convertOrderToProject = async (orderId, projectData, tenantId, perf
     clientUserId: null
   };
 };
+
+export const deleteOrder = async (orderId, tenantIdToFilter, clientIdToFilter, performerId) => {
+  return await prisma.$transaction(async (tx) => {
+    const where = { id: orderId };
+    if (tenantIdToFilter !== null) where.tenantId = tenantIdToFilter;
+    if (clientIdToFilter !== null) where.clientId = clientIdToFilter;
+
+    const order = await tx.order.findFirst({
+      where,
+      include: { orderItems: true }
+    });
+
+    if (!order) {
+      throw new AppError('Order not found or access denied', 404);
+    }
+
+    // Release reserved stock for inventory items if status is not delivered/cancelled
+    if (order.status !== 'delivered' && order.status !== 'cancelled' && order.orderType === 'DELIVERY') {
+      await releaseReservedStock(tx, order.orderItems);
+    }
+
+    // Delete associated items
+    if (order.orderItems && order.orderItems.length > 0) {
+       await tx.orderItem.deleteMany({ where: { orderId: order.id } });
+    }
+
+    // Delete the order itself
+    await tx.order.delete({ where: { id: order.id } });
+
+    await logAudit({
+      module: 'ORDERS',
+      action: 'DELETE',
+      description: `Deleted Order ${order.orderNumber}`,
+      newValue: null,
+      performedBy: performerId
+    });
+
+    return true;
+  });
+};
+
 
