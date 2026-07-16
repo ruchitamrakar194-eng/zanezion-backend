@@ -72,8 +72,49 @@ export const generateInvoice = async (data, performerId, tenantId) => {
       if (!existingItem) {
         let fallbackItem = await prisma.item.findFirst({ where: { ...(tenantId != null && { tenantId }) } });
         if (!fallbackItem) {
+          // Find or create category for this tenant
+          let category = await prisma.itemCategory.findFirst({
+            where: { name: 'General', ...(tenantId != null && { tenantId }) }
+          });
+          if (!category) {
+            category = await prisma.itemCategory.create({
+              data: {
+                name: 'General',
+                description: 'General Category',
+                tenantId: tenantId || 1,
+                status: 'active'
+              }
+            });
+          }
+
+          // Find or create unit for this tenant
+          let unit = await prisma.itemUnit.findFirst({
+            where: { shortName: 'pcs', ...(tenantId != null && { tenantId }) }
+          });
+          if (!unit) {
+            unit = await prisma.itemUnit.create({
+              data: {
+                name: 'Pieces',
+                shortName: 'pcs',
+                tenantId: tenantId || 1,
+                status: 'active'
+              }
+            });
+          }
+
+          // Create the fallback item with correct schema fields
           fallbackItem = await prisma.item.create({
-            data: { tenantId: tenantId || 1, itemCode: 'SVC-001', name: 'General Logistics Service', category: 'General', type: 'service', unit: 'pcs', unitPrice: 0, inventoryStatus: 'in_stock' }
+            data: {
+              tenantId: tenantId || 1,
+              categoryId: category.id,
+              unitId: unit.id,
+              sku: 'SVC-' + Date.now().toString().slice(-6),
+              name: 'General Logistics Service',
+              description: 'General Logistics Service',
+              inventoryType: 'INTERNAL',
+              price: 0,
+              status: 'active'
+            }
           });
         }
         it.itemId = fallbackItem.id;
