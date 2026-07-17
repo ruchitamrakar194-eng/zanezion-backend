@@ -96,7 +96,7 @@ export const getOrders = async (req, res, next) => {
   try {
     const tenantIdToFilter = resolveTenantId(req);
 
-    if (['INDIVIDUAL_CLIENT', 'CUSTOMER', 'BUSINESS_CLIENT', 'CLIENT'].includes(req.user.role?.name?.toUpperCase())) {
+    if (['INDIVIDUAL_CLIENT', 'CUSTOMER'].includes(req.user.role?.name?.toUpperCase())) {
       req.query.clientId = req.user.clientId;
     }
 
@@ -184,7 +184,7 @@ export const deleteOrder = async (req, res, next) => {
   try {
     const tenantIdToFilter = resolveTenantId(req);
     const roleName = req.user.role?.name?.toUpperCase();
-    const clientIdToFilter = ['INDIVIDUAL_CLIENT', 'CUSTOMER', 'BUSINESS_CLIENT', 'CLIENT'].includes(roleName) ? req.user.clientId : null;
+    const clientIdToFilter = ['INDIVIDUAL_CLIENT', 'CUSTOMER'].includes(roleName) ? req.user.clientId : null;
 
     await orderService.deleteOrder(Number(req.params.id), tenantIdToFilter, clientIdToFilter, req.user.id);
     sendResponse(res, 200, 'Order deleted successfully');

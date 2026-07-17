@@ -111,52 +111,42 @@ export const createDelivery = async (data, performerId, tenantId) => {
       adHocWarehouseId = newWarehouse.id;
     }
 
-    let defaultItem = await prisma.item.findFirst({ where: { ...(tenantId != null && { tenantId }) } });
-    if (!defaultItem) {
-      // Find or create category for this tenant
-      let category = await prisma.itemCategory.findFirst({
-        where: { name: 'General', ...(tenantId != null && { tenantId }) }
-      });
-      if (!category) {
-        category = await prisma.itemCategory.create({
-          data: {
-            name: 'General',
-            description: 'General Category',
-            tenantId: tenantId || 1,
-            status: 'active'
-          }
-        });
-      }
-
-      // Find or create unit for this tenant
-      let unit = await prisma.itemUnit.findFirst({
-        where: { shortName: 'pcs', ...(tenantId != null && { tenantId }) }
-      });
-      if (!unit) {
-        unit = await prisma.itemUnit.create({
-          data: {
-            name: 'Pieces',
-            shortName: 'pcs',
-            tenantId: tenantId || 1,
-            status: 'active'
-          }
-        });
-      }
-
-      defaultItem = await prisma.item.create({
+    // Find or create category for this tenant (needed for creating custom items)
+    let category = await prisma.itemCategory.findFirst({
+      where: { name: 'General', ...(tenantId != null && { tenantId }) }
+    });
+    if (!category) {
+      category = await prisma.itemCategory.create({
         data: {
+          name: 'General',
+          description: 'General Category',
           tenantId: tenantId || 1,
-          categoryId: category.id,
-          unitId: unit.id,
-          sku: 'MISC-' + Date.now().toString().slice(-6),
-          name: 'Miscellaneous Asset',
-          description: 'Miscellaneous Asset',
-          inventoryType: 'INTERNAL',
-          price: 0,
           status: 'active'
         }
       });
     }
+
+    // Find or create unit for this tenant
+    let unit = await prisma.itemUnit.findFirst({
+      where: { shortName: 'pcs', ...(tenantId != null && { tenantId }) }
+    });
+    if (!unit) {
+      unit = await prisma.itemUnit.create({
+        data: {
+          name: 'Pieces',
+          shortName: 'pcs',
+          tenantId: tenantId || 1,
+          status: 'active'
+        }
+      });
+    }
+
+    // Parse manifest items from remarks to get actual item names
+    let manifestItems = [];
+    try {
+      const remarksData = typeof data.remarks === 'string' ? JSON.parse(data.remarks) : (data.remarks || {});
+      manifestItems = Array.isArray(remarksData.manifestItems) ? remarksData.manifestItems : [];
+    } catch (e) { /* ignore parse errors */ }
 
     data.warehouseId = adHocWarehouseId;
     deliveryData.warehouseId = adHocWarehouseId;
@@ -174,9 +164,43 @@ export const createDelivery = async (data, performerId, tenantId) => {
       }
     }
 
-    const validItems = await Promise.all(items.map(async (it) => {
+    const validItems = await Promise.all(items.map(async (it, index) => {
+      // 1. Try to find the item by its ID for this tenant
       const itemExists = it.itemId ? await prisma.item.findFirst({ where: { id: Number(it.itemId), ...(tenantId != null && { tenantId }) } }) : null;
-      const finalItemId = itemExists ? itemExists.id : defaultItem.id;
+
+      let finalItemId;
+      if (itemExists) {
+        finalItemId = itemExists.id;
+      } else {
+        // 2. Get the actual item name from the manifest
+        const manifestItem = manifestItems[index];
+        const itemName = (manifestItem?.name || '').trim() || `Custom Item ${index + 1}`;
+
+        // 3. Try to find an existing item by name for this tenant
+        let itemByName = await prisma.item.findFirst({
+          where: { name: itemName, ...(tenantId != null && { tenantId }) }
+        });
+
+        // 4. Create the item if it doesn't exist
+        if (!itemByName) {
+          itemByName = await prisma.item.create({
+            data: {
+              tenantId: tenantId || 1,
+              categoryId: category.id,
+              unitId: unit.id,
+              sku: 'ITEM-' + Date.now().toString().slice(-6) + '-' + index,
+              name: itemName,
+              description: manifestItem?.weight ? `${itemName} (Weight: ${manifestItem.weight})` : itemName,
+              inventoryType: 'INTERNAL',
+              price: 0,
+              status: 'active'
+            }
+          });
+        }
+
+        finalItemId = itemByName.id;
+      }
+
       it.itemId = finalItemId; // Mutate the original item so the validation loop sees the correct ID
       return {
         itemId: finalItemId,
@@ -186,13 +210,24 @@ export const createDelivery = async (data, performerId, tenantId) => {
       };
     }));
 
+    // Build order metadata from manifest so order page shows correct info
+    const orderMetadata = {};
+    if (manifestItems.length > 0) {
+      orderMetadata.manifestItems = manifestItems;
+    }
+    if (data.missionType) orderMetadata.missionType = data.missionType;
+    if (data.transportMode) orderMetadata.transportMode = data.transportMode;
+    if (data.pickupLocation) orderMetadata.pickupLocation = data.pickupLocation;
+    if (data.dropLocation) orderMetadata.dropLocation = data.dropLocation;
+
     order = await orderRepo.createOrder({
       orderNumber: orderNumberToUse,
       clientId: clientIdToUse,
       createdById: orderCreatedById,
       status: 'approved',
       orderType: data.missionType === 'Chauffeur' ? 'Service' : 'Delivery',
-      priority: 'high'
+      priority: 'high',
+      metadata: orderMetadata
     }, validItems, tenantId);
 
     data.orderId = order.id;
