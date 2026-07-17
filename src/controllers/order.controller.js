@@ -96,7 +96,7 @@ export const getOrders = async (req, res, next) => {
   try {
     const tenantIdToFilter = resolveTenantId(req);
 
-    if (['INDIVIDUAL_CLIENT', 'CUSTOMER'].includes(req.user.role?.name?.toUpperCase())) {
+    if (['INDIVIDUAL_CLIENT', 'CUSTOMER', 'BUSINESS_CLIENT', 'CLIENT'].includes(req.user.role?.name?.toUpperCase())) {
       req.query.clientId = req.user.clientId;
     }
 

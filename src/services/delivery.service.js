@@ -8,6 +8,19 @@ import prisma from '../config/db.js';
 export const createDelivery = async (data, performerId, tenantId) => {
   const { items, ...deliveryData } = data;
 
+  // Only keep fields that exist in the Delivery Prisma model to prevent
+  // unknown fields (client, companyId, customerId, etc.) from crashing Prisma
+  const validDeliveryFields = [
+    'orderId', 'clientId', 'assignedTo', 'warehouseId', 'status',
+    'dispatchDate', 'deliveryDate', 'remarks', 'missionType',
+    'transportMode', 'vehicleRef', 'etaSchedule', 'requestDate',
+    'dueDate', 'pickupLocation', 'dropLocation', 'routeDistance',
+    'staffPayRate', 'deliveryFee'
+  ];
+  Object.keys(deliveryData).forEach(key => {
+    if (!validDeliveryFields.includes(key)) delete deliveryData[key];
+  });
+
   let order;
   if (data.orderId) {
     const numericOrderId = Number(data.orderId);
