@@ -72,10 +72,11 @@ export const getClients = async (req, res, next) => {
   try {
     const roleName = req.user.role?.name?.toUpperCase();
     const isSuperAdminOrAdmin = ['SUPER_ADMIN', 'ADMIN'].includes(roleName);
+    const isPersonalQuery = req.query.clientType === 'Personal' || req.query.clientType === 'individual';
 
-    // Super Admin & Admin view all clients across all tenants
+    // Super Admin & Admin or Personal client query -> view all clients across all tenants
     let tenantIdToFilter = null;
-    if (!isSuperAdminOrAdmin) {
+    if (!isSuperAdminOrAdmin && !isPersonalQuery) {
       tenantIdToFilter = req.user.tenantId || 1;
     } else if (req.query?.tenantId) {
       tenantIdToFilter = Number(req.query.tenantId);
