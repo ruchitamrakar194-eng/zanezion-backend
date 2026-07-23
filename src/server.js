@@ -15,6 +15,7 @@ async function startServer() {
     // Check DB Connection
     await prisma.$connect();
     console.log('✅ Database connected successfully');
+    console.log('🚀 Server started with Personal clients cross-tenant fix v2.0');
 
     // Wrap Express app with HTTP server
     const server = http.createServer(app);
