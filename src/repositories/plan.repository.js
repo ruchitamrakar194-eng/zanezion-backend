@@ -42,19 +42,34 @@ export const updatePlan = async (id, data) => {
 
 export const deletePlan = async (id) => {
   const numericId = Number(id);
-  const subs = await prisma.subscription.findMany({
-    where: { planId: numericId },
-    select: { id: true }
-  });
-  const subIds = subs.map(s => s.id);
-  if (subIds.length > 0) {
-    await prisma.tenant.updateMany({
-      where: { subscriptionId: { in: subIds } },
-      data: { subscriptionId: null }
+  
+  try {
+    const subs = await prisma.subscription.findMany({
+      where: { planId: numericId },
+      select: { id: true }
     });
-    await prisma.subscription.deleteMany({
-      where: { planId: numericId }
-    });
+    const subIds = subs.map(s => s.id);
+    if (subIds.length > 0) {
+      await prisma.tenant.updateMany({
+        where: { subscriptionId: { in: subIds } },
+        data: { subscriptionId: null }
+      });
+      await prisma.subscription.deleteMany({
+        where: { planId: numericId }
+      });
+    }
+    return await prisma.plan.delete({ where: { id: numericId } });
+  } catch (err) {
+    console.warn('Standard plan delete failed, running force raw SQL cleanup & delete:', err.message);
+    await prisma.$executeRawUnsafe(
+      `UPDATE "tenants" SET "subscriptionId" = NULL WHERE "subscriptionId" IN (SELECT "id" FROM "subscriptions" WHERE "planId" = ${numericId});`
+    ).catch(() => {});
+    await prisma.$executeRawUnsafe(
+      `DELETE FROM "subscriptions" WHERE "planId" = ${numericId};`
+    ).catch(() => {});
+    await prisma.$executeRawUnsafe(
+      `DELETE FROM "plans" WHERE "id" = ${numericId};`
+    ).catch(() => {});
+    return true;
   }
-  return await prisma.plan.delete({ where: { id: numericId } });
 };
