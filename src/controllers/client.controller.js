@@ -70,15 +70,13 @@ export const createClient = async (req, res, next) => {
 
 export const getClients = async (req, res, next) => {
   try {
-    // For SaaS/Business Clients: Super Admin needs to see them across tenants
-    // For Normal Clients tab: Super Admin sees only HQ (tenantId=1) clients
     const roleName = req.user.role?.name?.toUpperCase();
     const isManagementRole = ['SUPER_ADMIN', 'ADMIN'].includes(roleName);
     const isPersonalTab = req.query.clientType === 'Personal' || req.query.clientType === 'individual';
 
     // Super Admin / Admin OR Personal client tab queries should view all clients across all tenants
     const tenantIdToFilter = (isManagementRole || isPersonalTab)
-      ? resolveTenantIdForSaasManagement(req)
+      ? resolveTenantIdForSaasManagement(req)  // null = see all clients across all tenants
       : resolveTenantId(req);
 
     if (['INDIVIDUAL_CLIENT'].includes(req.user.role?.name)) {
@@ -101,8 +99,7 @@ export const getClientById = async (req, res, next) => {
     let tenantIdToFilter = resolveTenantId(req);
     const isSuperAdmin = req.user.role?.name === 'SUPER_ADMIN';
     if (isSuperAdmin) {
-      const checkClient = await prisma.client.findUnique({ where: { id: Number(req.params.id) }, select: { clientType: true } });
-      if (checkClient?.clientType === 'SaaS' || checkClient?.clientType === 'Business') tenantIdToFilter = null;
+      tenantIdToFilter = null;
     }
 
     const client = await clientService.getClientById(Number(req.params.id), tenantIdToFilter);
@@ -117,8 +114,7 @@ export const updateClient = async (req, res, next) => {
     let tenantIdToFilter = resolveTenantId(req);
     const isSuperAdmin = req.user.role?.name === 'SUPER_ADMIN';
     if (isSuperAdmin) {
-      const checkClient = await prisma.client.findUnique({ where: { id: Number(req.params.id) }, select: { clientType: true } });
-      if (checkClient?.clientType === 'SaaS' || checkClient?.clientType === 'Business') tenantIdToFilter = null;
+      tenantIdToFilter = null;
     }
 
     const payload = req.body;
