@@ -1,6 +1,7 @@
 import * as planRepository from '../repositories/plan.repository.js';
 import AppError from '../utils/AppError.js';
 import { logAudit } from '../utils/audit.js';
+import prisma from '../config/db.js';
 
 export const createPlan = async (data, performerId) => {
   const plan = await planRepository.createPlan(data);
@@ -56,7 +57,26 @@ export const deletePlan = async (id, performerId) => {
   const plan = await planRepository.findPlanById(id);
   if (!plan) throw new AppError('Plan not found', 404);
 
-  await planRepository.deletePlan(id);
+  // Unlink subscriptions and tenant references before deleting plan to avoid foreign key errors
+  await prisma.$transaction(async (tx) => {
+    const subs = await tx.subscription.findMany({
+      where: { planId: id },
+      select: { id: true }
+    });
+    const subIds = subs.map(s => s.id);
+
+    if (subIds.length > 0) {
+      await tx.tenant.updateMany({
+        where: { subscriptionId: { in: subIds } },
+        data: { subscriptionId: null }
+      });
+      await tx.subscription.deleteMany({
+        where: { planId: id }
+      });
+    }
+
+    await tx.plan.delete({ where: { id } });
+  });
 
   await logAudit({
     module: 'PLANS',
