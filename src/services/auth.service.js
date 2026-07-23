@@ -323,6 +323,24 @@ export const signupUser = async (data, file) => {
         status: 'active'
       }
     });
+
+    try {
+      await prisma.client.create({
+        data: {
+          clientCode: `CLT-${crypto.randomBytes(4).toString('hex').toUpperCase()}`,
+          companyName: name,
+          contactPerson: name,
+          email,
+          phone: phone || '',
+          clientType: 'Personal',
+          source: 'Website',
+          status: 'active'
+        }
+      });
+    } catch (err) {
+      console.warn('Failed to create client record for personal user:', err.message);
+    }
+
     return user;
   }
 

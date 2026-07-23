@@ -141,65 +141,7 @@ export const PERSONAL_MEMBERSHIP_CONCIERGE_SERVICES = [
   },
 ];
 
-export const ACCESS_PLANS = [
-  {
-    id: "basic",
-    name: "Standard Protocol",
-    tier: "Foundation",
-    price: "$99",
-    period: "per month",
-    yearlyPrice: "$999",
-    description: "Essential tools for small logistics operations.",
-    features: [
-      "Core Order Management",
-      "Basic Inventory Tracking",
-      "Client Management (Up to 10)",
-      "Standard Delivery Sheets",
-      "Email Support",
-      "Single User Access"
-    ],
-    commitment: "Monthly or Yearly subscription.",
-  },
-  {
-    id: "professional",
-    name: "Executive Protocol",
-    tier: "Growth",
-    price: "$249",
-    period: "per month",
-    yearlyPrice: "$2499",
-    description: "Advanced coordination for scaling hospitality businesses.",
-    features: [
-      "Everything in Basic",
-      "Real-time GPS Tracking",
-      "Employee Geolocation Tasks",
-      "Automated Procurement Quotes",
-      "Advanced Reporting Analytics",
-      "Up to 5 Staff Users",
-      "Priority Priority Support"
-    ],
-    commitment: "Monthly or Yearly subscription.",
-  },
-  {
-    id: "platinum",
-    name: "Platinum Protocol",
-    tier: "Enterprise",
-    price: "$499",
-    period: "per month",
-    yearlyPrice: "$4999",
-    description: "Total control for luxury concierge & logistics firms.",
-    features: [
-      "Everything in Professional",
-      "Full Fleet Management Suite",
-      "Unlimited Staff & Clients",
-      "Custom Branding (White Label)",
-      "Dedicated Account Manager",
-      "API Access for Integrations",
-      "Proof of Delivery with Imagery",
-      "24/7 VIP Concierge Support"
-    ],
-    commitment: "Monthly or Yearly subscription.",
-  }
-];
+export const ACCESS_PLANS = [];
 
 export const USERS = [
   { id: 1, name: 'John Doe', email: 'john@example.com', phone: '123-456-7890', role: 'Operations', status: 'Active' },
