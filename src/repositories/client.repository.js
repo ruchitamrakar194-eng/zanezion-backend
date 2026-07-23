@@ -33,7 +33,9 @@ export const findAllClients = async (tenantId, query) => {
       ]
     }),
     ...(status && { status }),
-    ...(clientType && { clientType })
+    ...(clientType && {
+      clientType: clientType === 'Personal' ? { in: ['Personal', 'individual'] } : clientType
+    })
   };
 
   const [clients, total] = await Promise.all([
