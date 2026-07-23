@@ -32,14 +32,15 @@ export const resolveTenantId = (req) => {
  * Returns null to skip tenant filtering.
  */
 export const resolveTenantIdForSaasManagement = (req) => {
-  const isSuperAdmin = req.user?.role?.name === 'SUPER_ADMIN';
+  const roleName = req.user?.role?.name?.toUpperCase();
+  const isManagementRole = ['SUPER_ADMIN', 'ADMIN'].includes(roleName);
 
-  if (isSuperAdmin) {
+  if (isManagementRole) {
     // If explicitly filtering by tenant, use that
     if (req.query?.tenantId) {
       return Number(req.query.tenantId);
     }
-    // null = no filter = see all tenants (only for SaaS management)
+    // null = no filter = see all tenants (for SaaS management and Normal Clients)
     return null;
   }
 
