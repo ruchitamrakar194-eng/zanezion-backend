@@ -313,6 +313,24 @@ export const signupUser = async (data, file) => {
   const hashedPassword = await bcrypt.hash(password, 10);
 
   if (accountType === 'personal') {
+    // Create Organization + Tenant for the personal user (required for Client FK)
+    const personalOrg = await prisma.organization.create({
+      data: {
+        name: name,
+        email,
+        phone: phone || ''
+      }
+    });
+
+    const personalTenantCode = `PERSONAL-${crypto.randomBytes(4).toString('hex').toUpperCase()}`;
+    const personalTenant = await prisma.tenant.create({
+      data: {
+        organizationId: personalOrg.id,
+        tenantCode: personalTenantCode,
+        status: 'active'
+      }
+    });
+
     const user = await prisma.user.create({
       data: {
         name,
@@ -320,26 +338,25 @@ export const signupUser = async (data, file) => {
         password: hashedPassword,
         phone,
         roleId: roleRecord.id,
+        tenantId: personalTenant.id,
         status: 'active'
       }
     });
 
-    try {
-      await prisma.client.create({
-        data: {
-          clientCode: `CLT-${crypto.randomBytes(4).toString('hex').toUpperCase()}`,
-          companyName: name,
-          contactPerson: name,
-          email,
-          phone: phone || '',
-          clientType: 'Personal',
-          source: 'Website',
-          status: 'active'
-        }
-      });
-    } catch (err) {
-      console.warn('Failed to create client record for personal user:', err.message);
-    }
+    await prisma.client.create({
+      data: {
+        tenantId: personalTenant.id,
+        clientCode: `CLT-${crypto.randomBytes(4).toString('hex').toUpperCase()}`,
+        companyName: name,
+        contactPerson: name,
+        email,
+        phone: phone || '',
+        clientType: 'Personal',
+        plan: 'Free',
+        source: 'Website',
+        status: 'active'
+      }
+    });
 
     return user;
   }
