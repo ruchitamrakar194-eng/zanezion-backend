@@ -5,7 +5,7 @@ export const createPlan = async (data) => {
 };
 
 export const findPlanById = async (id) => {
-  return await prisma.plan.findUnique({ where: { id } });
+  return await prisma.plan.findUnique({ where: { id: Number(id) } });
 };
 
 export const findAllPlans = async (query) => {
@@ -13,7 +13,7 @@ export const findAllPlans = async (query) => {
   const skip = (page - 1) * limit;
   
   const where = {
-    name: { contains: search }
+    ...(search && { name: { contains: search } })
   };
   
   if (isActive !== undefined) {
@@ -35,11 +35,26 @@ export const findAllPlans = async (query) => {
 
 export const updatePlan = async (id, data) => {
   return await prisma.plan.update({
-    where: { id },
+    where: { id: Number(id) },
     data
   });
 };
 
 export const deletePlan = async (id) => {
-  return await prisma.plan.delete({ where: { id } });
+  const numericId = Number(id);
+  const subs = await prisma.subscription.findMany({
+    where: { planId: numericId },
+    select: { id: true }
+  });
+  const subIds = subs.map(s => s.id);
+  if (subIds.length > 0) {
+    await prisma.tenant.updateMany({
+      where: { subscriptionId: { in: subIds } },
+      data: { subscriptionId: null }
+    });
+    await prisma.subscription.deleteMany({
+      where: { planId: numericId }
+    });
+  }
+  return await prisma.plan.delete({ where: { id: numericId } });
 };
