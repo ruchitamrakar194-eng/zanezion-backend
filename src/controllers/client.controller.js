@@ -71,13 +71,15 @@ export const createClient = async (req, res, next) => {
 export const getClients = async (req, res, next) => {
   try {
     const roleName = req.user.role?.name?.toUpperCase();
-    const isManagementRole = ['SUPER_ADMIN', 'ADMIN'].includes(roleName);
-    const isPersonalTab = req.query.clientType === 'Personal' || req.query.clientType === 'individual';
+    const isSuperAdminOrAdmin = ['SUPER_ADMIN', 'ADMIN'].includes(roleName);
 
-    // Super Admin / Admin OR Personal client tab queries should view all clients across all tenants
-    const tenantIdToFilter = (isManagementRole || isPersonalTab)
-      ? resolveTenantIdForSaasManagement(req)  // null = see all clients across all tenants
-      : resolveTenantId(req);
+    // Super Admin & Admin view all clients across all tenants
+    let tenantIdToFilter = null;
+    if (!isSuperAdminOrAdmin) {
+      tenantIdToFilter = req.user.tenantId || 1;
+    } else if (req.query?.tenantId) {
+      tenantIdToFilter = Number(req.query.tenantId);
+    }
 
     if (['INDIVIDUAL_CLIENT'].includes(req.user.role?.name)) {
       req.query.id = req.user.clientId;
