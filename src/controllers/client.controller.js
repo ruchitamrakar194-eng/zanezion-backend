@@ -93,7 +93,7 @@ export const getClients = async (req, res, next) => {
     }
 
     const result = await clientService.getClients(tenantIdToFilter, req.query);
-    sendResponse(res, 200, 'Clients fetched successfully', result);
+    sendResponse(res, 200, 'Clients fetched successfully', { ...result, debugTenantIdToFilter: tenantIdToFilter, debugUserRole: req.user.role, version: '100.0-FIX' });
   } catch (error) {
     next(error);
   }
