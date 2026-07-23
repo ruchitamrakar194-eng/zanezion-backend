@@ -312,7 +312,13 @@ export const signupUser = async (data, file) => {
 
   const hashedPassword = await bcrypt.hash(password, 10);
 
-  if (accountType === 'personal') {
+  const isPersonalSignup = (
+    accountType?.toLowerCase() === 'personal' ||
+    role?.toLowerCase() === 'customer' ||
+    dbRoleName === 'CUSTOMER'
+  );
+
+  if (isPersonalSignup) {
     // Create Organization + Tenant for the personal user (required for Client FK)
     const personalOrg = await prisma.organization.create({
       data: {

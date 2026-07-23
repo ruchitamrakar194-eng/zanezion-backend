@@ -72,8 +72,11 @@ export const getClients = async (req, res, next) => {
   try {
     // For SaaS/Business Clients: Super Admin needs to see them across tenants
     // For Normal Clients tab: Super Admin sees only HQ (tenantId=1) clients
-    const isSuperAdmin = req.user.role?.name === 'SUPER_ADMIN';
-    const tenantIdToFilter = isSuperAdmin
+    const isSuperAdminOrAdmin = ['SUPER_ADMIN', 'ADMIN'].includes(req.user.role?.name);
+    const isPersonalTab = req.query.clientType === 'Personal' || req.query.clientType === 'individual';
+
+    // Super Admin / Admin OR Personal client tab queries should view all clients across all tenants
+    const tenantIdToFilter = (isSuperAdminOrAdmin || isPersonalTab)
       ? resolveTenantIdForSaasManagement(req)  // null = see all clients across all tenants
       : resolveTenantId(req);
 
