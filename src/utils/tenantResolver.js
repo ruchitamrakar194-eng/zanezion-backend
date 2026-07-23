@@ -32,7 +32,8 @@ export const resolveTenantId = (req) => {
  * Returns null to skip tenant filtering.
  */
 export const resolveTenantIdForSaasManagement = (req) => {
-  const roleName = req.user?.role?.name?.toUpperCase();
+  const rawRole = typeof req.user?.role === 'string' ? req.user.role : (req.user?.role?.name || req.user?.roleName || '');
+  const roleName = String(rawRole).toUpperCase();
   const isManagementRole = ['SUPER_ADMIN', 'ADMIN'].includes(roleName);
 
   if (isManagementRole) {
